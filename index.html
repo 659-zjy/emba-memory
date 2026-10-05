@@ -741,7 +741,7 @@ function rateCurrent(result){
   }
   if(session.idx >= session.queue.length) session.idx = 0;
   session.open = false;
-  saveState(); renderTop();
+  saveState(); renderTop(); ghAutoPush();
   if(session.queue.length === 0){ renderSessionSummary(session); } else { renderSession(session.mode); }
 }
 function renderSessionSummary(s){
@@ -899,6 +899,20 @@ function renderSettings(){
   + '<div class="set-row"><div class="s-label"><b>导入进度</b><p>粘贴或选择另一台设备导出的文本，覆盖当前进度。</p></div>'
   + '<button class="btn btn-line" onclick="importData()">导入进度</button></div>'
   + '<div id="import-box" style="display:none;margin-top:8px"></div>'
+  + '</div>'
+  + '<div class="panel" style="margin-top:18px"><h3 style="margin-bottom:8px">GitHub 云同步（自动多端同步）</h3>'
+  + '<p style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:14px">把进度存到你的 GitHub Gist：<b>打开网站自动拉取最新进度，学习完成后自动上传</b>，电脑和手机进度实时一致。令牌只保存在本机浏览器、请勿泄露；请在上线地址（github.io）使用本功能。</p>'
+  + '<div class="set-row"><div class="s-label"><b>GitHub 令牌（Token）</b><p>在 github.com/settings/tokens 生成，只需勾选 gist 权限。</p></div>'
+  + '<input type="password" id="gh-token" placeholder="ghp_..." value="'+esc(ghToken()||'')+'"></div>'
+  + '<div class="set-row"><div class="s-label"><b>保存令牌</b><p>保存后用于连接你的 GitHub 账号。</p></div>'
+  + '<button class="btn btn-main" onclick="ghSaveToken()">保存令牌</button>'
+  + '<button class="btn btn-line" onclick="ghTest()">测试连接</button></div>'
+  + '<div class="set-row"><div class="s-label"><b>手动同步</b><p>立即把当前进度上传到云端 / 从云端拉取最新进度。</p></div>'
+  + '<button class="btn btn-line" onclick="ghPush()">上传进度</button>'
+  + '<button class="btn btn-line" onclick="ghPull()">拉取进度</button></div>'
+  + '<div class="set-row"><div class="s-label"><b>自动同步</b><p>开启后：打开页面自动拉取，学习/复习后自动上传。</p></div>'
+  + '<input type="checkbox" id="gh-auto" style="width:20px;height:20px" '+(ghAutoOn()?'checked':'')+' onchange="ghToggleAuto(this.checked)"></div>'
+  + '<div id="gh-status" style="font-size:12.5px;color:var(--ink-soft);margin-top:6px">'+(ghLastSync() ? '上次同步：'+ghLastSync() : '尚未同步')+'</div>'
   + '</div>';
 }
 function exportData(){
@@ -941,7 +955,7 @@ function applyImport(){
   const s = parseBackup(v);
   if(!s){ toast('进度文本无效，请确认完整粘贴'); return; }
   state = s;
-  saveState(); renderTop(); route();
+  saveState(); renderTop(); route(); ghAutoPush();
   toast('导入成功');
 }
 function readImportFile(ev){
@@ -952,7 +966,7 @@ function readImportFile(ev){
     const s = parseBackup(String(r.result).trim());
     if(!s){ toast('文件内容无效'); return; }
     state = s;
-    saveState(); renderTop(); route();
+    saveState(); renderTop(); route(); ghAutoPush();
     toast('导入成功');
   };
   r.readAsText(f, 'utf-8');
@@ -966,6 +980,85 @@ function parseBackup(text){
   }catch(e){}
   return null;
 }
+
+/* ---------- GitHub Gist 云同步 ---------- */
+const GH_KEYS = { t:'eba_gh_token', g:'eba_gh_gist', a:'eba_gh_auto', ts:'eba_gh_ts' };
+function ghGet(k){ try{ return localStorage.getItem(GH_KEYS[k]); }catch(e){ return null; } }
+function ghSet(k, v){ try{ localStorage.setItem(GH_KEYS[k], v); }catch(e){} }
+function ghToken(){ return ghGet('t') || ''; }
+function ghAutoOn(){ return ghGet('a') === '1'; }
+function ghLastSync(){ return ghGet('ts') || ''; }
+function ghHeaders(){
+  return { 'Authorization':'token '+ghToken(), 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' };
+}
+function ghStatusMsg(msg){ const el = document.getElementById('gh-status'); if(el) el.textContent = msg; }
+function ghSaveToken(){
+  const t = ($('#gh-token').value||'').trim();
+  if(!t){ toast('请先粘贴令牌'); return; }
+  ghSet('t', t);
+  toast('令牌已保存');
+  ghTest();
+}
+function ghTest(){
+  const t = ghToken();
+  if(!t){ toast('请先保存令牌'); return; }
+  ghStatusMsg('正在连接 GitHub…');
+  fetch('https://api.github.com/user', { headers: ghHeaders() })
+    .then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(u => { ghStatusMsg('连接成功：'+(u.login||'')+(ghLastSync() ? '；上次同步 '+ghLastSync() : '')); toast('GitHub 连接成功'); })
+    .catch(e => { ghStatusMsg('连接失败：'+e.message+'（令牌无效或网络异常）'); toast('连接失败'); });
+}
+function ghPush(){
+  const t = ghToken();
+  if(!t){ toast('请先保存令牌'); return; }
+  const content = JSON.stringify(state);
+  const gid = ghGet('g');
+  ghStatusMsg('正在上传进度…');
+  const url = gid ? ('https://api.github.com/gists/'+gid) : 'https://api.github.com/gists';
+  const method = gid ? 'PATCH' : 'POST';
+  const body = gid
+    ? { files:{ 'eba-progress.json':{ content } } }
+    : { description:'嵌入式八股 · 艾宾浩斯记忆进度', public:false, files:{ 'eba-progress.json':{ content } } };
+  fetch(url, { method, headers: ghHeaders(), body: JSON.stringify(body) })
+    .then(g => { if(g.id) ghSet('g', g.id); const now = new Date().toLocaleString('zh-CN'); ghSet('ts', now); ghStatusMsg('上传成功；上次同步 '+now); toast('进度已上传到云端'); })
+    .catch(e => { ghStatusMsg('上传失败：'+e.message); toast('上传失败，请检查令牌与网络'); });
+}
+function ghPull(){
+  const t = ghToken(), gid = ghGet('g');
+  if(!t){ toast('请先保存令牌'); return; }
+  if(!gid){ toast('云端还没有进度（请先在一台设备上传）'); return; }
+  ghStatusMsg('正在拉取进度…');
+  fetch('https://api.github.com/gists/'+gid, { headers: ghHeaders() })
+    .then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(g => {
+      const f = g.files && g.files['eba-progress.json'];
+      if(!f || !f.content) throw new Error('云端文件缺失');
+      let s;
+      try{ s = JSON.parse(f.content); }catch(e){ throw new Error('云端数据无法解析'); }
+      if(!s || s.v !== 1) throw new Error('云端数据格式无效');
+      state = s;
+      saveState(); renderTop(); route();
+      const now = new Date().toLocaleString('zh-CN'); ghSet('ts', now);
+      ghStatusMsg('拉取成功；上次同步 '+now);
+      toast('已从云端恢复进度');
+    })
+    .catch(e => { ghStatusMsg('拉取失败：'+e.message); });
+}
+let ghTimer = null;
+function ghAutoPush(){
+  if(!ghAutoOn() || !ghToken()) return;
+  clearTimeout(ghTimer);
+  ghTimer = setTimeout(() => { ghPush(); }, 2000);
+}
+function ghAutoPull(){
+  if(!ghAutoOn() || !ghToken() || !ghGet('g')) return;
+  setTimeout(() => { ghPull(); }, 1200);
+}
+function ghToggleAuto(on){
+  ghSet('a', on ? '1' : '0');
+  toast(on ? '自动同步已开启' : '自动同步已关闭');
+  if(on && ghToken()) ghPush();
+}
 function saveSettings(){
   const n = parseInt($('#set-new').value, 10);
   const ivs = $('#set-iv').value.split(/[,，\s]+/).map(x => parseInt(x, 10)).filter(x => x > 0 && x < 100);
@@ -973,7 +1066,7 @@ function saveSettings(){
   if(!ivs.length){ toast('复习间隔格式有误'); return; }
   state.config.dailyNew = n;
   state.config.intervals = ivs;
-  saveState(); renderTop(); renderSettings();
+  saveState(); renderTop(); renderSettings(); ghAutoPush();
   toast('设置已保存');
 }
 function resetAll(){
@@ -994,6 +1087,7 @@ function init(){
   $('#hamburger').addEventListener('click', () => { $('#sidebar').classList.add('open'); $('#overlay').classList.add('show'); });
   $('#overlay').addEventListener('click', () => { $('#sidebar').classList.remove('open'); $('#overlay').classList.remove('show'); });
   route();
+  ghAutoPull();
 }
 window.CARDS = CARDS;
 init();
