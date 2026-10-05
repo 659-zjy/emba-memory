@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>嵌入式八股 · 艾宾浩斯记忆</title>
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --paper:#F3EFE3; --paper-2:#EAE4D2; --card:#FEFCF6;
+  --ink:#24333A; --ink-soft:#5C6B66;
+  --green:#2E7D5B; --green-soft:#DFECE3;
+  --red:#BF3B24; --red-soft:#F5E1D9;
+  --blue:#33658A; --blue-soft:#E1EAF2;
+  --gold:#B07E2B; --gold-soft:#F0E5CB;
+  --line:#D6CFBA; --shadow:0 1px 3px rgba(36,51,58,.14),0 6px 18px rgba(36,51,58,.06);
+  --nav:#1E332F; --nav-ink:#CFE0D6; --nav-active:#F5F1E6;
+  --radius:12px;
+  --body-font:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --display-font:"Noto Serif SC","Songti SC",SimSun,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:var(--body-font);color:var(--ink);background:var(--paper);
+  background-image:repeating-linear-gradient(transparent 0,transparent 23px,rgba(36,51,58,.045) 23px,rgba(36,51,58,.045) 24px);
+  min-height:100vh;line-height:1.6;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input{font-family:inherit}
+a{color:inherit;text-decoration:none}
+
+/* ===== 布局 ===== */
+.app{display:flex;min-height:100vh}
+.sidebar{
+  width:220px;flex:0 0 220px;background:var(--nav);color:var(--nav-ink);
+  display:flex;flex-direction:column;padding:22px 14px 18px;position:sticky;top:0;height:100vh;
+}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;border-bottom:1px solid rgba(207,224,214,.18);margin-bottom:14px}
+.brand-mark{width:38px;height:38px;border-radius:9px;background:var(--green);color:#F5F1E6;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.brand h1{font-family:var(--display-font);font-size:17px;font-weight:700;color:#F5F1E6;line-height:1.25}
+.brand p{font-size:11px;opacity:.72;margin-top:2px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;font-size:14px;color:var(--nav-ink);transition:background .15s}
+.nav a svg{flex:0 0 auto;opacity:.85}
+.nav a:hover{background:rgba(245,241,230,.08)}
+.nav a.active{background:var(--nav-active);color:var(--ink);font-weight:700}
+.side-foot{margin-top:auto;font-size:11px;opacity:.6;padding:10px 12px;line-height:1.5}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{
+  display:flex;align-items:center;gap:14px;padding:16px 26px;
+  border-bottom:1px solid var(--line);background:rgba(243,239,227,.82);backdrop-filter:blur(4px);
+  position:sticky;top:0;z-index:20;
+}
+.hamburger{display:none;width:44px;height:44px;border-radius:9px;align-items:center;justify-content:center;background:var(--nav);color:#F5F1E6}
+.top-title{font-family:var(--display-font);font-size:20px;font-weight:700}
+.top-date{font-size:13px;color:var(--ink-soft)}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:700;background:var(--nav);color:#F5F1E6;white-space:nowrap}
+.chip.soft{background:var(--paper-2);color:var(--ink);font-weight:500}
+.chip.red{background:var(--red);color:#fff}
+.chip.green{background:var(--green);color:#fff}
+.content{flex:1;width:100%;max-width:1060px;margin:0 auto;padding:26px 26px calc(60px + env(safe-area-inset-bottom))}
+
+/* ===== 视图 ===== */
+.view{display:none;animation:fadeIn .22s ease}
+.view.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.section-head{margin-bottom:18px}
+.section-head h2{font-family:var(--display-font);font-size:24px;font-weight:700;margin-bottom:4px}
+.section-head p{color:var(--ink-soft);font-size:14px}
+
+/* ===== 卡片通用 ===== */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px}
+.panel + .panel{margin-top:18px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px}
+.stat .num{font-family:var(--display-font);font-size:30px;font-weight:900;line-height:1.1}
+.stat .lbl{font-size:13px;color:var(--ink-soft);margin-top:4px}
+.stat .sub{font-size:12px;color:var(--ink-soft);margin-top:2px}
+.row2{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+
+/* ===== 今日视图 ===== */
+.curve-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px}
+.curve-wrap h3{font-size:15px;font-weight:700;margin-bottom:2px}
+.curve-wrap .cap{font-size:12px;color:var(--ink-soft);margin-bottom:10px}
+.today-tasks{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}
+.task-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;display:flex;flex-direction:column;gap:12px}
+.task-card .t-head{display:flex;align-items:center;gap:10px}
+.task-card .t-head svg{flex:0 0 auto}
+.task-card h3{font-size:16px;font-weight:700;flex:1}
+.task-card .big{font-family:var(--display-font);font-size:34px;font-weight:900}
+.task-card p{font-size:13px;color:var(--ink-soft)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:10px;font-size:14px;font-weight:700;transition:filter .15s,transform .05s}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-main{background:var(--green);color:#fff}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-line{background:var(--paper-2);color:var(--ink);border:1px solid var(--line)}
+.btn:hover:not(:disabled){filter:brightness(1.06)}
+.round-dots{display:flex;gap:6px;align-items:center}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--paper-2);border:1px solid var(--line)}
+.dot.on{background:var(--green);border-color:var(--green)}
+
+/* ===== 学习/复习卡片 ===== */
+.flash-wrap{max-width:760px;margin:0 auto}
+.flash-progress{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:13px;color:var(--ink-soft)}
+.progress-bar{flex:1;height:8px;border-radius:999px;background:var(--paper-2);overflow:hidden}
+.progress-bar i{display:block;height:100%;background:var(--green);border-radius:999px;transition:width .25s}
+.flash-card{
+  background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
+  padding:34px 34px 26px;min-height:340px;display:flex;flex-direction:column;position:relative;
+  border-top:6px solid var(--blue);
+}
+.flash-card.review{border-top-color:var(--red)}
+.flash-card .fc-chap{font-size:12px;font-weight:700;color:var(--ink-soft);display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.flash-card .fc-chap .band{width:10px;height:10px;border-radius:3px;display:inline-block}
+.flash-card .q{font-size:19px;font-weight:700;line-height:1.55;flex:0 0 auto}
+.flash-card .a-wrap{display:none;margin-top:18px;padding-top:16px;border-top:1px dashed var(--line)}
+.flash-card.open .a-wrap{display:block;animation:fadeIn .25s ease}
+.flash-card .a{font-size:14.5px;line-height:1.85;color:var(--ink)}
+.flash-card .a b{color:var(--green)}
+.flash-card .a .k{color:var(--blue);font-weight:700}
+.flash-actions{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap}
+.rate-btn{flex:1;min-width:130px;padding:14px 10px;border-radius:11px;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;transition:filter .15s}
+.rate-btn.good{background:var(--green);color:#fff}
+.rate-btn.fuzzy{background:var(--gold);color:#fff}
+.rate-btn.forgot{background:var(--red);color:#fff}
+.rate-btn:hover{filter:brightness(1.07)}
+.flip-hint{margin-top:16px;font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:6px;justify-content:center}
+.session-summary{max-width:620px;margin:40px auto;text-align:center}
+.session-summary .ring{width:120px;height:120px;border-radius:50%;background:var(--green-soft);color:var(--green);display:flex;align-items:center;justify-content:center;font-family:var(--display-font);font-size:34px;font-weight:900;margin:0 auto 18px}
+.empty-hint{background:var(--card);border:1px dashed var(--line);border-radius:var(--radius);padding:40px 24px;text-align:center;color:var(--ink-soft)}
+
+/* ===== 浏览 ===== */
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.chip-btn{padding:7px 14px;border-radius:999px;font-size:13px;font-weight:500;background:var(--card);border:1px solid var(--line);transition:all .15s}
+.chip-btn:hover{border-color:var(--green)}
+.chip-btn.on{background:var(--ink);color:#F5F1E6;border-color:var(--ink)}
+.search-box{display:flex;gap:10px;margin-bottom:18px}
+.search-box input{flex:1;padding:11px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:14px;color:var(--ink);outline:none}
+.search-box input:focus{border-color:var(--green)}
+.browse-item{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 20px;margin-bottom:12px;border-left:5px solid var(--blue)}
+.browse-item .bi-q{font-size:15px;font-weight:700;line-height:1.5;cursor:pointer}
+.browse-item .bi-a{display:none;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);font-size:13.5px;line-height:1.8;color:var(--ink)}
+.browse-item.open .bi-a{display:block}
+.bi-meta{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--ink-soft);flex-wrap:wrap}
+.tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700}
+.tag.learned{background:var(--blue-soft);color:var(--blue)}
+.tag.mastered{background:var(--green-soft);color:var(--green)}
+.tag.due{background:var(--red-soft);color:var(--red)}
+
+/* ===== 轮次计划 ===== */
+.plan-round{border:1px solid var(--line);border-radius:var(--radius);background:var(--card);margin-bottom:16px;overflow:hidden}
+.plan-round .pr-head{display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--paper-2);font-weight:700;font-size:15px}
+.plan-round .pr-head .current{background:var(--green);color:#fff;padding:2px 10px;border-radius:999px;font-size:11px}
+.plan-table{width:100%;border-collapse:collapse;font-size:13.5px}
+.plan-table th{text-align:left;padding:10px 20px;color:var(--ink-soft);font-size:12px;border-bottom:1px solid var(--line);background:rgba(243,239,227,.4)}
+.plan-table td{padding:10px 20px;border-bottom:1px solid rgba(214,207,186,.5);vertical-align:top}
+.plan-table tr:last-child td{border-bottom:none}
+.plan-table .day-num{font-weight:700;color:var(--green);font-family:var(--display-font)}
+.plan-table .today-row{background:var(--gold-soft)}
+.rhythm{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.rhythm span{font-size:11px;padding:3px 9px;border-radius:999px;background:var(--blue-soft);color:var(--blue);font-weight:600}
+
+/* ===== 统计 ===== */
+.bars{display:flex;align-items:flex-end;gap:8px;height:130px;padding:6px 2px 0}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.bar .b{width:100%;max-width:34px;background:var(--green);border-radius:5px 5px 2px 2px;min-height:3px;transition:height .3s}
+.bar .d{font-size:11px;color:var(--ink-soft)}
+.bar .v{font-size:11px;font-weight:700;color:var(--ink)}
+.chap-prog{margin-top:6px}
+.chap-prog .cp-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;font-size:13px}
+.chap-prog .cp-name{width:190px;flex:0 0 auto;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chap-prog .cp-bar{flex:1;height:9px;border-radius:999px;background:var(--paper-2);overflow:hidden}
+.chap-prog .cp-bar i{display:block;height:100%;border-radius:999px}
+.chap-prog .cp-num{width:74px;text-align:right;color:var(--ink-soft);font-size:12px;flex:0 0 auto}
+
+/* ===== 设置 ===== */
+.set-row{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.set-row:last-child{border-bottom:none}
+.set-row .s-label{flex:1;min-width:200px}
+.set-row .s-label b{font-size:14.5px}
+.set-row .s-label p{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+.set-row input[type=number]{width:96px;padding:9px 12px;border-radius:9px;border:1px solid var(--line);background:var(--card);font-size:14px}
+.set-row input[type=text]{width:180px;padding:9px 12px;border-radius:9px;border:1px solid var(--line);background:var(--card);font-size:14px}
+.toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(80px);background:var(--ink);color:#F5F1E6;padding:11px 20px;border-radius:999px;font-size:14px;box-shadow:var(--shadow);transition:transform .3s;z-index:60;opacity:0;max-width:86vw;width:max-content}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.overlay{display:none;position:fixed;inset:0;background:rgba(30,51,47,.5);z-index:30}
+.overlay.show{display:block}
+
+/* ===== 响应式 ===== */
+@media (max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:40;transform:translateX(-105%);transition:transform .25s;box-shadow:6px 0 24px rgba(0,0,0,.2)}
+  .sidebar.open{transform:none}
+  .hamburger{display:flex}
+  .content{padding:20px 14px calc(70px + env(safe-area-inset-bottom))}
+  .grid-3{grid-template-columns:1fr 1fr;gap:12px}
+  .today-tasks{grid-template-columns:1fr;gap:12px}
+  .flash-card{padding:24px 18px 20px;min-height:0}
+  .flash-card .q{font-size:16.5px}
+  .flash-card .a{font-size:13.5px}
+  .rate-btn{flex:1 1 30%;min-width:0;font-size:14px;padding:15px 4px;min-height:50px}
+  .flash-actions{gap:8px}
+  .top-title{font-size:17px}
+  .chap-prog .cp-name{width:120px}
+  .plan-table{font-size:12px}
+  .plan-table th,.plan-table td{padding:9px 10px}
+  .plan-round .pr-head{padding:12px 14px;font-size:14px}
+  .search-box input,.set-row input[type=number],.set-row input[type=text],#browse-kw{font-size:16px}
+  .stat .num{font-size:25px}
+  .bars{gap:5px}
+  .topbar{padding:12px 14px}
+}
+@media (max-width:420px){
+  .grid-3{grid-template-columns:1fr}
+  .rate-btn{font-size:13px;padding:14px 3px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== 侧边导航 ===== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/><path d="M6 6v12M10 6v12M14 6v12M18 6v12"/></svg>
+      </div>
+      <div>
+        <h1>嵌入式八股记忆</h1>
+        <p>艾宾浩斯 · 5天一轮</p>
+      </div>
+    </div>
+    <nav class="nav" id="nav">
+      <a href="#/today" data-route="today">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>今日任务</a>
+      <a href="#/study" data-route="study">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>学习新卡</a>
+      <a href="#/review" data-route="review">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>复习</a>
+      <a href="#/browse" data-route="browse">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>题库浏览</a>
+      <a href="#/plan" data-route="plan">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>轮次计划</a>
+      <a href="#/stats" data-route="stats">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15v-4M12 15V7M17 15v-6"/></svg>学习统计</a>
+      <a href="#/settings" data-route="settings">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>设置</a>
+    </nav>
+    <div class="side-foot">进度保存在本机浏览器<br>每天 34 张新卡 · 5 天学完 167 道</div>
+  </aside>
+  <div class="overlay" id="overlay"></div>
+
+  <!-- ===== 主区域 ===== -->
+  <div class="main">
+    <div class="topbar">
+      <button class="hamburger" id="hamburger" aria-label="打开菜单">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <div>
+        <div class="top-title">今日任务</div>
+        <div class="top-date" id="top-date"></div>
+      </div>
+      <div class="top-right" id="top-right"></div>
+    </div>
+
+    <div class="content">
+
+      <!-- ===== 视图：今日 ===== -->
+      <section class="view" data-view="today" id="view-today"></section>
+
+      <!-- ===== 视图：学习 ===== -->
+      <section class="view" data-view="study" id="view-study"></section>
+
+      <!-- ===== 视图：复习 ===== -->
+      <section class="view" data-view="review" id="view-review"></section>
+
+      <!-- ===== 视图：浏览 ===== -->
+      <section class="view" data-view="browse" id="view-browse"></section>
+
+      <!-- ===== 视图：轮次计划 ===== -->
+      <section class="view" data-view="plan" id="view-plan"></section>
+
+      <!-- ===== 视图：统计 ===== -->
+      <section class="view" data-view="stats" id="view-stats"></section>
+
+      <!-- ===== 视图：设置 ===== -->
+      <section class="view" data-view="settings" id="view-settings"></section>
+
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   数据：章节与题目（见文末 CARDS）
+   ========================================================= */
+const CH = {
+  1:"C语言·基础语法",2:"C语言·关键字与预处理",3:"C语言·编译与链接",4:"C语言·构建工具",
+  5:"C语言·数组指针与函数",6:"C语言·字符串与常用函数",7:"C语言·内存管理",8:"C语言·大小端",
+  9:"C++ 篇",10:"操作系统·核心机制与RTOS",11:"操作系统·进程与线程",12:"计算机网络"
+};
+const CH_COLOR = ['#33658A','#2E7D5B','#8A6D3B','#7A4E9B','#C2412C','#3E7C6B','#5B6E9B','#B07E2E','#4E7A8A','#6B5B9B','#2F6F8F','#A65336'];
+const CARDS = [
+{id:1,ch:1,q:"运算符优先级从高到低如何排列？结合方向有什么例外？",a:"优先级：括号/下标 ( ) [ ] → 单目 ! ++ -- sizeof & * → 算术 * / % → + - → 移位 → 关系 → 逻辑 && || → 赋值 = += -=（最低）。结合方向绝大多数从左到右；例外：赋值运算符、条件运算符 ?:、单目运算符从右到左。"},
+{id:2,ch:1,q:"类型转换遵循什么规则？",a:"低等类型向高等类型转换：char/short → int → unsigned int → long → unsigned long → float → double（double 最高）。例：3.0 * 6 中 6 提升为浮点型，结果为浮点。"},
+{id:3,ch:1,q:"C语言标识符的命名规则？",a:"以字母或下划线开头，后可跟字母、数字、下划线；不能以数字开头、不能含特殊字符；区分大小写（Variable 与 variable 不同）；C89 最长 31 字符、C99 最长 63 字符；关键字不能作标识符。"},
+{id:4,ch:1,q:"形参和实参的区别？",a:"形参：函数定义时声明在参数列表中、无确定值起占位作用，函数执行时创建、结束后销毁（栈上）；实参：调用时传入的实际值，生命周期取决于定义作用域。实参不随形参变化（值传递）；要修改实参必须用指针或 C++ 引用。"},
+{id:5,ch:1,q:"字符串常量与字符常量的区别？",a:"双引号“A”是字符串常量，是带 \\0 结尾的字符数组，长度 = 字符数 + 1；单引号‘A’是字符常量，占 1 字节，存其 ASCII 值。例：“Hello”含 \\0 共 6 个字符；‘H’只占 1 字节。"},
+{id:6,ch:1,q:"全局变量和局部变量的区别？",a:"全局变量：函数外声明、整个程序可访问、默认初始化、生命周期贯穿程序、存数据区（data/bss）；局部变量：函数或代码块内声明、仅所属作用域可访问、无默认初始化、生命周期随函数结束、存栈区。函数结束后栈内存失效，访问该地址是未定义行为。跨文件使用全局变量：头文件写 extern 声明，定义只能出现一次，加 static 则限当前文件。"},
+{id:7,ch:1,q:"int main(int argc, char **argv) 参数含义？",a:"argc：命令行参数个数（含程序名本身，最小为 1）；argv：字符指针数组，每个元素指向一个以 \\0 结尾的字符串；argv[0] 指向程序名/路径，argv[1] 起为用户参数，argv[argc] 为 NULL 表示结束。例：./program arg1 arg2 arg3 → argc=4。"},
+{id:8,ch:1,q:"32 位系统基本类型占多少字节？",a:"char 1 字节；short 2 字节；int 4 字节；long 4（32位）/8（64位）；float 4 字节；double 8 字节；指针 4（32位）/8（64位）。32 位处理器中 1 个字 = 4 字节 = 32 位。"},
+{id:9,ch:2,q:"static 关键字的作用？",a:"①修饰局部变量：生命周期变为整个程序、只初始化一次、多次调用间保留值，作用域仍限于函数内；②修饰全局变量/函数：限制为内部链接，作用域限定义它的文件内（封装）；③C++ 静态成员变量：属于类、所有对象共享，需类外定义并初始化；④静态成员函数：属于类、可通过类名调用，无 this 指针、只能访问静态成员。记忆：static 局部变量 = 全局变量的持久性 + 局部变量的私密性。"},
+{id:10,ch:2,q:"typedef 和 #define 的区别？",a:"#define 是预处理指令：预处理时机械文本替换、不做正确性检查、无作用域限制，除别名还可定义常量和编译开关；typedef 是关键字：编译时处理、有类型检查、只定义类型别名（含 struct 等）、有自己的作用域。"},
+{id:11,ch:2,q:"const 修饰指针：常量指针与指针常量的区别？",a:"常量指针 const int *p（或 int const *p）：指向的值不可修改（*p 不能改），指针本身可指向其他地址；指针常量 int *const p：指针本身不可修改（不能 p=&b），但 *p 可改；const int *const p：两者都不可改。记忆：const 在 * 左边 → 值不可变；const 在 * 右边 → 指向不可变。"},
+{id:12,ch:2,q:"const 和 #define 的区别？",a:"起作用阶段：const 编译阶段处理、在内存中分配空间（堆或栈）；#define 预处理阶段文本替换、不分配内存。类型：const 有类型、有类型检查；#define 无类型不检查（如 #define SQUARE(x) x*x 传 1+2 会出括号问题）。作用域：const 有限制；#define 无限制。符号表：const 生成符号可调试；#define 不生成符号难调试。const 定义的是常变量（有名字的不变量），define 定义的是常量（没名字）。"},
+{id:13,ch:2,q:"extern 关键字的作用？",a:"引用同一文件后定义的变量，或引用其他文件中的全局变量/函数（extern int globalVar; 只需指明类型和变量名，不能再重新赋值）。只有变量是全局变量时 extern 才起作用。extern \"C\"：指示编译器按 C 语言方式编译链接这部分代码，解决 C++ 名称修饰（mangling）问题，用于 C 与 C++ 互调。"},
+{id:14,ch:2,q:"#include<> 和 #include“ ” 的区别？",a:"尖括号 <>：先在系统标准头文件目录查找（stdlib.h、stdio.h 等），找不到则报错；双引号 “”：先在当前源文件目录查找，再到项目配置的头文件引用目录，最后到系统目录。自定义头文件用 “”；注意若项目目录存在与系统同名头文件会覆盖系统版本。"},
+{id:15,ch:2,q:"头文件防止重复包含的原理？",a:"用 #ifndef / #define / #endif 构成 Include Guard：首次包含宏未定义 → 执行 #define 并编译内容；再次包含宏已定义 → 跳过全部内容。注意：Guard 解决同一头文件被重复展开；管不了两个 .c 定义同名变量的链接期重复定义错误（multiple definition），正确做法是只在一处定义、其他文件 extern 声明。"},
+{id:16,ch:2,q:"volatile 关键字的作用？",a:"修饰可能被意想不到地改变的变量，编译器不会优化对其访问，每次使用都重新从内存读取。三个常见场景：①多线程中的共享变量；②中断程序中访问的非自动变量；③并行设备的硬件寄存器。注意：volatile 只管「别缓存访问」，不管原子性（count++ 仍可能丢更新）和内存序，多线程真正同步要用原子操作或锁。"},
+{id:17,ch:2,q:"register 关键字？",a:"提示编译器尽量将局部变量存储在 CPU 寄存器中（如循环频繁访问的变量），访问速度远快于内存。只是建议而非强制（寄存器数量有限）；寄存器变量不能取地址（& 非法）；现代编译器通常自动完成该优化，手动使用效果有限。"},
+{id:18,ch:2,q:"一个变量可以既是 const 又是 volatile 吗？",a:"可以。const 表示程序内不能修改它；volatile 表示它可能被外部因素（硬件、其他线程）改变，编译器每次访问都从内存读最新值。典型场景：硬件寄存器——程序不能写它（const），但它会被硬件更新（volatile）。例：const volatile uint32_t *reg = ...;"},
+{id:19,ch:2,q:"预处理器标识 #error 的目的？",a:"编译时只要遇到 #error 就生成编译错误提示并停止编译，语法格式：#error error-message。常用于 #ifdef / #ifndef 分支中检查宏是否符合预期（如宏由 makefile 或系统头文件外部指定时，确认其是否被定义）。"},
+{id:20,ch:3,q:"C 语言从源码到可执行文件的四个阶段？",a:"①预处理（gcc -E）：处理 # 开头的指令——展开头文件、宏替换、条件编译、删注释，产物是 .i 文本；②编译（gcc -S）：词法/语法/语义分析、类型检查与优化，生成 .s 汇编代码（const、typedef 的类型检查在此发生）；③汇编（gcc -c）：汇编转机器指令，生成 .o 目标文件（含符号表、尚未链接）；④链接（gcc main.o -o main）：合并 .o 与静态/动态库、解析符号引用、分配地址，生成可执行文件。undefined reference 错误发生在链接期。"},
+{id:21,ch:3,q:"声明和定义的区别？未定义在哪个阶段报错？",a:"变量：声明只告诉编译器某类型变量会被使用、不分配内存；定义分配内存。函数：声明一般在头文件（告诉编译器函数存在）；定义是函数体实现。报错阶段：变量/函数未声明 → 编译期（语法检查）；变量/函数未定义 → 链接期（关心怎么实现，报 undefined reference）。"},
+{id:22,ch:4,q:"什么是交叉编译？为什么需要交叉编译？",a:"在一个平台（如 x86 PC）上编译出另一个平台（如 ARM、RISC-V）上运行的程序，编译环境和运行环境架构不同（相对的是本地编译 Native）。原因：①目标平台资源受限，嵌入式设备跑不动完整编译工具链；②硬件架构不同（PC 是 x86，单片机/ARM 板是 ARM/RISC-V），指令集不兼容；③系统库、ABI 不同，必须用目标平台的库。注意要素：处理器架构、操作系统、编译器版本、编译选项（-mcpu、-mfloat-abi）、工具链配置。"},
+{id:23,ch:4,q:"常见的交叉编译工具链有哪些？命名规则？",a:"按「架构-厂商-操作系统-ABI」命名：arm-none-eabi-gcc（ARM 裸机/RTOS，用于 STM32、FreeRTOS、Cortex-M）；arm-linux-gnueabihf-gcc（ARM Linux，hf=硬浮点）；aarch64-linux-gnu-gcc（64 位 ARM，如树莓派 64 位、RK3568）；riscv64-unknown-elf-gcc（RISC-V）。编译内核/U-Boot 时常用环境变量 CROSS_COMPILE 指定工具链前缀。"},
+{id:24,ch:4,q:"交叉编译和本地编译的区别？",a:"本地编译：产物在与编译环境相同架构上运行，可本机直接运行验证，工具链用 gcc/clang；交叉编译：产物在不同架构上运行，需拷贝到目标板或借助模拟器（qemu-user）验证，工具链如 arm-none-eabi-gcc、aarch64-linux-gnu-gcc。记忆：本地编译是自产自销，交叉编译是代工。"},
+{id:25,ch:4,q:"Makefile 基础规则（1 个规则、2 个函数、3 个自动变量）？",a:"1 个规则：目标: 依赖条件 +（Tab 缩进）命令，命令前必须是 Tab 不能用空格。2 个函数：$(wildcard *.c) 收集所有 .c；$(patsubst %.c,%.o,$(src)) 模式替换 .c 为 .o。3 个自动变量：$@ 目标、$< 第一个依赖、$^ 所有依赖（去重）。clean 这类不产生文件的目标用 .PHONY 声明为伪目标。"},
+{id:26,ch:4,q:"CMake 是什么？和 Makefile 什么关系？",a:"CMake 是跨平台的构建系统生成器，本身不直接编译，根据 CMakeLists.txt 的描述生成对应平台的构建文件（Linux/macOS 生成 Makefile，Windows 生成 Visual Studio 工程）。关系：CMakeLists.txt → cmake 生成 → Makefile → make 编译 → 可执行文件。CMake 负责制定规则，make 负责执行编译。优点：跨平台、自动处理头文件路径和依赖、可维护性好。"},
+{id:27,ch:4,q:"CMakeLists.txt 有哪些常用命令？",a:"cmake_minimum_required(VERSION 3.16) 指定最低版本；project(hello C) 工程名和语言；add_executable(main main.c) 生成可执行文件；add_library(mylib STATIC a.c b.c) 生成静态库（SHARED 动态库）；target_include_directories(main PRIVATE ./inc) 头文件路径；target_link_libraries(main mylib) 链接库。构建：mkdir build && cd build && cmake .. && make。"},
+{id:28,ch:4,q:"如何用 CMake 进行交叉编译？",a:"方式一命令行指定编译器：cmake -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc ..（C++ 用 CMAKE_CXX_COMPILER）；方式二工具链文件（推荐）：把目标系统信息写进 toolchain.cmake（set CMAKE_SYSTEM_NAME、CMAKE_SYSTEM_PROCESSOR、CMAKE_C_COMPILER 等），再用 -DCMAKE_TOOLCHAIN_FILE=toolchain.cmake 指定。可用 CMAKE_CROSSCOMPILING 变量判断是否处于交叉编译状态。"},
+{id:29,ch:4,q:"动态库和静态库的区别？",a:"静态库（.a/.lib）：编译链接时把库代码直接复制进可执行文件，运行时不依赖外部库；程序大、每个进程一份副本（10 个程序=10 份）、更新库需重新编译链接所有程序。动态库（.so/.dll）：可执行文件只存引用，运行时由 OS 加载；程序小、多进程共享一份（只加载 1 次）、更新只需替换库文件、但依赖系统已装库。适用：体积速度敏感小工具用静态库，资源共享/需常更新用动态库。记忆：静态库=复印资料人手一份；动态库=公共图书馆。"},
+{id:30,ch:4,q:"了解编译器优化吗？常见手段和级别？",a:"目的：提高执行效率、减小体积。常见手段：常量折叠/常量传播（2*3*4 直接得 24）、死代码消除、内联展开、循环展开、寄存器分配、指令重排序。GCC 级别：-O0 不优化（方便调试）、-O1 基础、-O2 常用（循环展开/寄存器优化）、-O3 最强（含函数内联）、-Os 侧重减小体积。注意：优化可能改变指令执行顺序，多线程/硬件访问场景需用 volatile、原子操作或内存屏障防止被优化掉。"},
+{id:31,ch:4,q:"有没有碰到过禁止编译器优化的场景？",a:"①硬件寄存器：外设寄存器由硬件随时改变，必须 volatile，否则编译器把多次读取优化成一次（读缓存值）；②中断/多线程共享变量：while (!flag) 等待置位，不加 volatile 会被 -O2 优化成死循环；③内存映射 I/O：寄存器地址访问必须保证每次真实读写，如 *(volatile unsigned int *)0x40001000。解决：volatile、原子操作/互斥锁、内存屏障（__sync_synchronize()）。"},
+{id:32,ch:4,q:"什么是内联函数？和普通函数的区别？",a:"inline 修饰，编译时在调用点直接展开函数体，不产生真正的函数调用（省去压栈、跳转、返回地址保存开销）。与普通函数区别：编译期展开 vs 运行期 CALL 调用；无调用开销 vs 有栈帧创建/参数传递开销；每处调用点复制一份可能代码膨胀；内联后难单步调试。不适合内联：递归函数（无法展开）、函数体很大（代码膨胀影响指令缓存命中）、虚函数（运行时才决定）。inline 只是建议，是否内联由编译器决定。"},
+{id:33,ch:4,q:"extern \"C\" 的作用是什么？",a:"C++ 支持函数重载，编译时对函数名做符号重整（name mangling），如 print(int) 变成 _Z5printi；C 语言不支持重载，符号就是函数名。extern \"C\" 告诉 C++ 编译器这段代码按 C 规则编译/链接、禁用符号重整，使 C++ 能正确找到 C 库里的函数符号（很多嵌入式 SDK、底层驱动库是 C 写的）。不加会报 undefined reference。C 编译器不认识 extern \"C\"，要用 __cplusplus 宏包起来。"},
+{id:34,ch:5,q:"数组名和 &数组名所表示的地址区别？",a:"数组名 a 是首元素地址：a+1 指向第二个元素（但不能 a++、a+=1）；&a 是整个数组的地址：&a+1 跳过整个数组（类型为 int(*)[n]）。两种例外：用 sizeof(a) 求数组大小、取 &a 时，数组名代表整个数组。等价式：一维 p[i] ≡ *(p+i)；二维 c[i][j] ≡ *(*(c+i)+j)。"},
+{id:35,ch:5,q:"int *a[10] 和 int (*a)[10] 的区别？",a:"int *a[10] 指针数组：本质是数组，含 10 个 int* 元素，p[i] 是指针可指向不同 int；int (*a)[10] 数组指针：本质是指针，指向含 10 个 int 的数组，p+1 跳过整个数组，访问用 (*p)[i]。记忆：括号把 *p 括住 → 数组指针；* 与数组名结合 → 指针数组。"},
+{id:36,ch:5,q:"数组名与指针的区别？",a:"地址：数组名表示首元素地址；&p 得到指针自身地址。大小：sizeof(数组名)=整个数组大小（n × 元素大小）；sizeof(指针)=指针本身大小（32 位 4 字节 / 64 位 8 字节）。改变性：数组名不能被重新赋值（不能 arr++、arr=p）；指针变量可改变指向。本质：数组名可视为「指针常量」，但不是指针变量。"},
+{id:37,ch:5,q:"C++ 有哪几种传值方式？",a:"值传递：传副本，函数内修改不影响原数据，适合简单类型；引用传递：直接操作原数据、修改生效且无拷贝，适合对象/容器；指针传递：传地址，通过指针间接修改原数据，适合动态分配或需返回多个值。底层：传值和传指针本质都是值传递（指针传的是地址值——改指针本身不影响实参，需二级指针；改指向内容则影响实参）；传引用底层是指针常量（形参存实参地址），无拷贝。"},
+{id:38,ch:5,q:"指针函数与函数指针的区别？",a:"指针函数：返回指针的函数，本质是函数，声明 int *func();（* 在函数名前、返回类型处）；函数指针：指向函数的指针变量，本质是指针，声明 void (*p)();（* 在括号内）。函数指针可存储函数地址、间接调用，还可作为函数参数实现回调、运行时决定调用哪个函数。辨别：* 紧跟函数名 → 返回指针的函数；* 在括号内 → 函数指针。"},
+{id:39,ch:5,q:"指针的使用场景？",a:"①动态内存分配：malloc/calloc/realloc 返回指针；②数组和字符串操作：指针遍历高效访问（*(p+i)）；③函数参数传递：指针实现「引用传递」让函数修改调用者数据；④数据结构：链表、树、图通过指针连接组织节点；⑤函数指针：回调机制、事件驱动。"},
+{id:40,ch:5,q:"使用指针需要注意什么？空/野/悬垂指针？",a:"①定义后初始化或置 NULL；②赋值保证类型匹配；③free 后置 NULL 避免悬垂指针；④用前检查 malloc 是否成功、防越界。空指针：值为 NULL 明确不指向任何对象，解引用立即段错误；野指针：未初始化的随机地址，定义时初始化避免；悬垂指针：指向已释放/销毁的内存（free 后未置 NULL、返回栈地址），最隐蔽难排查。危害：空指针基本立即崩溃易发现；野/悬垂指针行为未定义，可能不崩但读到垃圾数据。"},
+{id:41,ch:5,q:"数组存储在哪里？",a:"栈内存：函数内定义的局部数组，编译时确定大小、自动分配释放、函数结束即销毁；堆内存：通过 malloc/calloc/new 动态分配，程序员手动 free/delete 管理、可跨函数使用；全局/静态数组：存储在数据段（data/bss），生命周期贯穿程序。"},
+{id:42,ch:5,q:"指针与引用的区别？",a:"指针是实体（存储内存地址的变量）：可修改指向、支持指针运算、用 * 解引用、可指向 NULL、有「指针常量」（int *const p）；引用是变量的别名：绑定后不可改、不支持运算、无需解引用、不能为空、没有「引用常量」（int& const 不存在）、有「常引用」（const int &a）。++ 意义：指针自增是地址移动（步长=类型大小）；引用自增是给所引用对象的值 +1。sizeof(引用)=所指向对象大小；sizeof(指针)=指针本身大小。"},
+{id:43,ch:5,q:"为什么有了指针还需要引用？",a:"指针：存储地址的变量，可为空（nullptr）、可重新赋值指向其他对象、可动态分配释放内存、灵活性和动态性强，适合需要表示空值（如函数返回可能为空的结果）或需要重新赋值的场景；引用：必须引用有效对象、初始化后不能被重新赋值、无需解引用、不会产生空指针/无效引用问题，更安全简洁，适合只需访问对象而不修改/不需重新赋值的场景。"},
+{id:44,ch:6,q:"字符数组如何初始化？",a:"char arr1[]={'a','b','c'} 没有 \\0，不是完整字符串；隐式初始化 char arr2[]=\"abc\" 自动补 \\0 共 4 个元素；char arr[]=\"Hello\" 大小为 6（5 字符 + \\0）；显式指定大小但存不下结束符会越界：char arr[5]=\"World\" 无法存下 \\0，未定义行为。"},
+{id:45,ch:6,q:"strcpy 与 memcpy 的区别？",a:"strcpy：字符串拷贝，从起始复制到 \\0 为止并把 \\0 一并复制，只适用于字符串，不检查目标容量（建议用 strncpy 限长）；memcpy：按指定字节数复制任意内存（数组、结构体等），不检查不处理 \\0，需自己指定正确字节数。用 memcpy 复制字符串要记得 +1 带上 \\0。"},
+{id:46,ch:6,q:"sizeof 与 strlen 的区别？",a:"sizeof：运算符，编译期求值，计算变量/类型/结构体占用的内存字节数，适用于所有类型，对数组返回整个数组大小，包含 \\0；strlen：函数，运行时遍历字符串直到 \\0，计算字符个数、不包含 \\0，只能用于 C 风格字符串。例：char str[]=\"hello\" → sizeof(str)=6，strlen(str)=5。"},
+{id:47,ch:7,q:"内存分布模型（低地址 → 高地址）？",a:"代码段（机器指令，通常只读）→ 数据段 data（已初始化的全局/静态变量）→ BSS 段（未初始化或初始化为 0 的全局/静态变量，启动时自动清零）→ 堆区（malloc/calloc 动态分配，从低地址向高地址增长）→ 共享区（文件映射/mmap，进程间共享内存）→ 栈区（局部变量、函数参数与返回信息，从高地址向低地址增长，先进后出自动管理）→ 命令行参数/环境变量、内核空间。"},
+{id:48,ch:7,q:"malloc 底层原理？",a:"小于 128K：调用 brk() 移动堆顶指针（program break），在堆区扩展内存；大于 128K：调用 mmap()，在堆和栈之间的「文件映射区域」找空间映射（与堆顶无关）；128K 是 glibc 默认 mmap 阈值（可 mallopt 调整）。具体实现：算总大小（请求+管理信息）→ 遍历空闲链表找合适块 → 找到标记已分配返回指针 → 找不到才 brk/mmap 向内核申请 → 切块标记分配 → free 时标记未分配放回链表复用。"},
+{id:49,ch:7,q:"在 1G 内存的计算机上能否 malloc 申请大于 1G 内存？为什么？",a:"可以。malloc 是在程序的虚拟地址空间申请的内存，与物理内存没有直接关系；虚拟地址与物理地址的映射由操作系统完成，操作系统可通过虚拟内存技术扩大可用内存（配合磁盘交换）。"},
+{id:50,ch:7,q:"malloc 和 calloc 的区别？",a:"malloc：分配指定字节数、不初始化（内容不确定可能是垃圾值），一个参数；calloc：分配 n 个指定大小的块并初始化为全 0，两个参数（个数、单个大小）。两者分配失败都返回 NULL，需要手动检查返回值。底层分配路径类似，calloc 多一步清零。"},
+{id:51,ch:7,q:"初始化为 0 的全局变量在 BSS 还是 Data 段？",a:"BSS 段。未初始化或初始化为 0 的全局/静态变量放 BSS，加载时由操作系统自动清零；显式初始化为非零值的全局/静态变量放 Data 段。"},
+{id:52,ch:7,q:"堆和栈的区别？",a:"分配方式：栈由操作系统自动分配释放（函数参数、局部变量）；堆由程序员手动分配释放（malloc/free），效率低。生长方向：堆向上（高地址）增长；栈向下（低地址）增长。生命周期：栈随函数调用/返回自动创建销毁；堆由程序员控制，可任意位置访问。空间大小：栈较小（Linux 默认约 8MB）超出栈溢出；堆很大（32 位程序理论接近 3GB）。碎片：栈后进先出不产生碎片；堆频繁分配释放产生内存碎片。"},
+{id:53,ch:7,q:"在局部定义很大的数组（如 2048）可以吗？",a:"不可以，会爆栈（栈溢出）。栈大小是系统预先规定的常数（Windows 下约 1–2M），申请超过栈剩余空间就 overflow。解决：①定义成全局数组；②加 static 放静态存储区；③用 malloc 申请空间放堆区，栈中只占一个指针大小。"},
+{id:54,ch:7,q:"在函数中申请堆内存的注意点？",a:"①用完及时 free 避免内存泄漏；②不要返回指向栈内存的指针（函数结束栈销毁）；③不要返回函数内临时数组的指针；④不要返回指向常量区的指针并修改（常量区只读）；⑤一级指针无法把申请的堆地址带出函数——函数内对一级指针的修改不影响外部指针，应使用二级指针（int **）或直接返回值；⑥分配前算好大小、检查 malloc 返回值、避免越界。"},
+{id:55,ch:7,q:"内存泄漏：常见情况和如何避免？",a:"内存泄漏 = 申请了一块内存空间使用完毕后没有释放。常见：new/malloc 后没 delete/free；子类继承父类时父类析构函数不是虚函数导致子类析构不被调用；文件句柄/socket/自定义资源类未调用释放函数；shared_ptr 成环循环引用。避免：有 new 就有 delete、有 malloc 就有 free 成对出现；避免循环中重复分配（用 realloc）；用智能指针；计数法（new+1/delete-1 打印验证）；基类析构声明为虚函数；对象数组用 delete []；用 Valgrind（Linux）/AddressSanitizer 等工具检测。"},
+{id:56,ch:7,q:"内存碎片？如何解决？",a:"外部碎片：未被分配的空闲区域小而分散，凑不出足够大的连续块（例：堆空闲 16 字节和 8 字节两块，无法满足一次 24 字节连续申请）；内部碎片：已分配的块比实际需求大、多余部分浪费（常见于固定大小分配）。解决：段页式管理（分页减少外部碎片）、内存池（预分配大块再切分，减少频繁分配释放）。"},
+{id:57,ch:7,q:"什么是内存池？",a:"预先申请一大块连续内存作为池，按需从中分配小块；释放时归还池中而非立即还给操作系统，池不足时再扩展。优点：减少内存碎片；提高分配效率（免去系统调用与复杂空闲链表维护）；分配/释放更快。典型实现：内存池数组 + 空闲链表（free_list）管理块。使用场景：实时系统（避免不确定的分配延迟）、高并发系统、嵌入式系统（RTOS/MCU 内存资源有限）。"},
+{id:58,ch:7,q:"为什么需要内存池？",a:"①减少外部碎片：预分配固定大小块，不产生不连续的小块；②提高分配效率：直接从池中取块，比 malloc/free 维护复杂空闲链表更快；③降低系统开销：减少系统调用次数、提高实时性；④适配嵌入式：RTOS/MCU（如 STM32、GD32）动态内存管理效率低，内存池可显著提升性能。"},
+{id:59,ch:7,q:"结构体的内存对齐？如何计算结构体大小？",a:"对齐原因：CPU 以固定宽度（4/8 字节）一次读取，数据起始地址是自身对齐值的整数倍时一次取回完整数据，否则跨总线边界需多次访问甚至报错。规则：①成员起始地址必须是其自身对齐值（通常=类型字节数）的整数倍，不满足则插入填充字节 padding；②结构体总大小必须是最大成员对齐值的整数倍，不足末尾补齐；③union 按最大成员的对齐值和大小计算，成员共享同一块内存。例：int(4)+char[30](30)+char(1)+double(8)+union(8) → 8+32+8+8=56 字节。#pragma pack(n) 按 n 与成员自身对齐值的较小者对齐。"},
+{id:60,ch:8,q:"什么是大小端？如何判断？",a:"大端：高位字节存低地址，0x12345678 存储为 12 34 56 78，常用于网络协议（网络字节序）；小端：低位字节存低地址，存储为 78 56 34 12，x86 系采用。判断方法：int i = 1; 把 &i 强转为 char* 读取最低地址字节，值为 1 是小端、值为 0 是大端（1 的二进制只有最低字节非零）。"},
+{id:61,ch:9,q:"面向对象的基本特征有哪些？",a:"封装：数据和操作封装在对象内，对外只暴露必要接口（public），隐藏内部实现（private/protected），保证数据安全；继承：在已有类基础上派生新类，复用基类属性和方法，避免重复代码；多态：同一消息在不同对象上有不同响应，同一接口不同实现，分编译期多态（重载）与运行期多态（虚函数）；抽象：把相似属性和行为抽象成类/接口，隐藏细节只保留必要部分（纯虚函数/抽象类）。"},
+{id:62,ch:9,q:"重载、重写（覆盖）和隐藏的区别？",a:"重载（overload）：同一作用域内（同一类），函数名相同、参数列表不同（个数/类型），与返回值无关，编译期多态，与是否虚函数无关；重写（override）：派生类重写基类的虚函数，函数名、参数、返回值完全相同，运行期多态，一般加 override 校验；隐藏（hide）：派生类屏蔽基类同名函数——参数相同但基类函数不是虚函数，或参数不同（无论基类是否虚函数），用 基类名::函数() 可显式调用。记忆：重载=同类内水平关系；重写=父子间垂直关系（须虚函数）；隐藏=同名即屏蔽。"},
+{id:63,ch:9,q:"类成员的访问权限和继承权限问题？",a:"三种访问权限：public 类内外都能访问；protected 类外不可访问、派生类可访问；private 仅类内可访问。三种继承方式：public 继承——基类成员保持原访问权限；protected 继承——基类 public/protected 变为 protected；private 继承——基类所有成员都变为 private。记忆：继承只会把权限收紧不会放宽；基类 private 成员无论怎么继承，派生类都无法直接访问。"},
+{id:64,ch:9,q:"C++ 有哪几种构造函数？",a:"默认构造函数（无参数，未定义任何构造函数时编译器自动生成）；有参构造函数（带参数初始化成员变量）；拷贝构造函数 MyClass(const MyClass&)（用已存在对象创建新对象，MyClass b=a）；移动构造函数 MyClass(MyClass&&)（转移临时对象资源避免拷贝，C++11 引入）；转换构造函数（只有一个参数且类型不同，可把该参数隐式转换为类对象，如 string 接收 char*）。"},
+{id:65,ch:9,q:"构造函数、拷贝构造函数和赋值操作符的区别？",a:"构造：对象不存在时创建新对象调用；拷贝构造：对象不存在，用另一个已存在对象初始化（MyClass b = a;）；赋值操作符：对象已存在，用另一个对象给它赋值（b = a;），属于重载 = 号。记忆：看等号出现时对象是否已创建——创建时是构造/拷贝构造，已存在时是赋值。"},
+{id:66,ch:9,q:"为什么基类析构函数必须是虚函数？",a:"基类指针指向派生类对象时，delete p 若只调用基类析构，派生类资源不会被释放 → 内存泄漏。声明为 virtual ~Base() 后，delete 时按实际对象类型先调派生类析构、再调基类析构，资源正确释放。特例：CRTP（模板静态多态）不需要虚析构。"},
+{id:67,ch:9,q:"构造函数一般不定义为虚函数的原因？",a:"虚函数机制依赖虚表指针 vptr，而 vptr 在构造函数执行时才被初始化，构造时对象还没完全建立，无法动态绑定；构造函数是创建对象时自动调用、不可能通过基类指针调用，虚函数没有意义。"},
+{id:68,ch:9,q:"构造函数、析构函数的执行顺序？",a:"构造顺序：基类构造函数 → 成员变量的构造函数（按声明顺序）→ 派生类构造函数体。析构顺序相反：派生类析构函数 → 成员变量析构（按声明逆序）→ 基类析构函数。拷贝构造内部：拷贝成员变量值；有指针成员需深拷贝；引用成员直接绑定。"},
+{id:69,ch:9,q:"浅拷贝和深拷贝的区别？",a:"浅拷贝：只复制成员值，指针成员复制的是地址，两个对象指向同一块内存，析构时 double free；默认拷贝构造/赋值是浅拷贝。深拷贝：指针成员重新分配内存并复制内容，两个对象互不影响，需要自定义拷贝构造函数和赋值操作符。规则：类里有堆内存成员（指针），必须自己写深拷贝。"},
+{id:70,ch:9,q:"成员初始化列表为什么更快？哪些情况必须使用？",a:"更快：函数体内赋值 = 先默认构造 + 再赋值（两次）；初始化列表 = 直接调用对应构造函数初始化（一次）。必须用初始化列表的四种情况：const 成员、引用成员、基类有参构造、成员对象没有默认构造/需传参构造。"},
+{id:71,ch:9,q:"this 指针的作用？",a:"this 是成员函数中隐含的指针，指向调用该函数的当前对象（调用 Fun() 实际是 this->Fun()）。用途：访问成员变量/成员函数、return *this 支持链式调用、区分同名局部变量和成员变量。static 成员函数没有 this 指针（属于类不属于对象），所以不能访问非静态成员。"},
+{id:72,ch:9,q:"C++ 多态的底层实现原理（虚函数表）？",a:"含有虚函数的类，编译器生成一张虚函数表（vtable）存放虚函数入口地址；对象内存开头存一个虚表指针 vptr 指向该表。构造对象时按实际类型初始化 vptr：先执行基类构造（vptr 指向基类虚表），再执行子类构造（vptr 指向子类虚表）。基类指针调用虚函数时通过 vptr → 虚表 → 函数入口间接调用，运行时决定调用哪个函数 = 动态绑定。派生类未重写的虚函数沿用基类实现；重写后虚表中换成自己的地址；新增虚函数追加在表后。"},
+{id:73,ch:9,q:"虚函数表存放在内存的什么区？",a:"虚函数表：只读数据段（.rodata，常量区）——编译期生成、全局仅一份、运行期只读，大小编译期确定；虚函数（代码）：代码段（.text）；对象中的 vptr：对象内存开头（32 位 4 字节 / 64 位 8 字节）。"},
+{id:74,ch:9,q:"什么是虚函数？哪些函数不能是虚函数？",a:"虚函数：用 virtual 修饰的成员函数，可被子类重写，通过基类指针/引用调用时按实际对象类型动态绑定（运行期多态）。不能是虚函数：构造函数（vptr 尚未建立）、内联函数（内联是编译期替换）、静态成员函数（无 this 指针）、友元函数（不属于类成员）、普通全局函数（无继承性）。"},
+{id:75,ch:9,q:"什么是纯虚函数？与虚函数的区别？",a:"纯虚函数：virtual void fun() = 0;，没有函数体，虚表中对应项为 0。含纯虚函数的类是抽象类，不能实例化；子类必须实现全部纯虚函数才能实例化。虚函数有默认实现、可重写可不重写；纯虚函数只是接口声明，强制子类实现。"},
+{id:76,ch:9,q:"常见 STL 容器性质总结？",a:"vector：底层动态数组，随机访问快、尾插快、中间插入/删除慢、扩容需搬移；list：双向链表，任意位置插入/删除快、不支持随机访问；deque：中央控制器 + 多缓冲区，首尾增删快、支持随机访问、中间慢；stack/queue：容器适配器（封装 deque/list），stack 后进先出、queue 先进先出；priority_queue：底层 vector + 堆（heap）规则，默认大顶堆；set/multiset/map/multimap：红黑树，有序，键唯一/可重复；unordered_set/unordered_map 等：哈希表，无序，平均 O(1) 查找。"},
+{id:77,ch:9,q:"malloc/free 与 new/delete 的区别？",a:"new/delete：C++ 运算符，按类型分配、编译器自动算大小、返回类型化指针、会调用构造函数/析构函数、失败抛 std::bad_alloc 异常、数组用 new[]/delete[]、可重载；malloc/free：C 库函数，按字节数分配、返回 void* 需强转、不调用构造/析构、失败返回 NULL、数组大小需自己算、可用 realloc 扩容。记忆：new 比 malloc 多做了「调构造 + 类型安全 + 抛异常」三件事。"},
+{id:78,ch:9,q:"new 和 delete 的实现原理？delete 如何知道释放内存的大小？",a:"new：①调 operator new 分配内存 → ②调构造函数初始化 → ③返回指针。delete：①调析构函数释放资源 → ②调 operator delete 把内存还回堆。delete 不需要知道大小：new 分配时编译器在内存块的元数据区域记录了对象大小等信息，delete 按指针地址找到元数据释放对应大小；new[]/delete[] 同理。"},
+{id:79,ch:9,q:"在成员函数中调用 delete this 会出现什么问题？",a:"对象立即被销毁释放，成员变量变成未定义值，后续任何涉及 this、成员或虚函数的操作都是未定义行为；内存未必马上回收，可能「碰巧还能访问」，但读到的是垃圾数据，最隐蔽难排查。不建议使用：销毁对象应通过外部 delete 或智能指针；确需自毁可延迟销毁（加入队列，函数执行完再删）。"},
+{id:80,ch:9,q:"既然有了 malloc/free，C++ 中为什么还需要 new/delete？",a:"new/delete 会自动调用构造函数/析构函数，正确管理对象生命周期，避免初始化遗漏和内存泄漏；支持继承、多态等面向对象特性（如通过基类指针创建派生类对象）；可重载 operator new/delete，实现内存池、对象池等自定义内存管理方案。"},
+{id:81,ch:9,q:"C++ 中类的数据成员和成员函数内存分布情况？",a:"数据成员存储在对象内存中，按声明顺序排列、遵循内存对齐规则；成员函数不占对象空间，全部存放在代码段（静态成员函数也在代码区，static 只决定存储期/可见性，不改变函数位置）；含虚函数的类对象额外带 vptr（对象内存开头）；static 数据成员在全局数据区，不占对象大小。"},
+{id:82,ch:9,q:"空类的大小是多少？类大小如何计算？",a:"空类大小为 1 字节：标准要求每个对象有独一无二的地址，编译器补 1 字节占位。含一个 int 成员 → 4；含 static 成员 → 不加（static 在全局数据区）；含虚函数 → 加 vptr（32 位 +4 / 64 位 +8）；继承含虚函数基类同样带 vptr。空基类优化（EBO）：空类作基类时不占空间，子类大小 = 自身成员大小。"},
+{id:83,ch:9,q:"指针传参和引用传参的底层原理？",a:"两者本质都是值传递，传递的是一个地址值；形参在栈上开辟局部变量存放该地址。指针：形参是独立的指针变量，改形参指针本身不影响实参（需二级指针或指针引用），解引用修改内容则影响实参；引用：底层是指针常量（存实参地址、指向不可变），编译后按间接寻址访问实参，任何操作都作用在实参上；符号表中引用直接记录被引用对象的地址。"},
+{id:84,ch:9,q:"智能指针是什么？",a:"智能指针是类模板，包装裸指针，通过引用计数等技术自动管理堆内存生命周期，解决忘记释放、二次释放、异常时泄漏等问题（C++11 引入）。作用：自动释放内存、避免悬垂指针和内存泄漏，提高代码可读性与可维护性。"},
+{id:85,ch:9,q:"常用的智能指针及实现？",a:"shared_ptr：共享所有权，引用计数，拷贝计数 +1、析构计数 -1，计数为 0 时释放资源；unique_ptr：独占所有权，不可拷贝、可移动（std::move 转移所有权，源指针置空），适合不共享的资源；weak_ptr：弱引用，配合 shared_ptr 使用打破循环引用，不增加引用计数，用前 lock() 检查是否有效；auto_ptr：已废弃（拷贝即转移所有权易出错），用 unique_ptr 替代。"},
+{id:86,ch:9,q:"RAII 是什么？",a:"RAII = Resource Acquisition Is Initialization（资源获取即初始化）：用对象生命周期管理资源——对象构造时获取资源，析构时释放资源。作用域结束自动调用析构，即使发生异常也能保证资源释放，代码中几乎不再需要手动 delete。智能指针是 RAII 的典型实现。"},
+{id:87,ch:9,q:"C++11 有哪些新特性？",a:"智能指针（unique_ptr/shared_ptr/weak_ptr）；右值引用与移动语义（std::move），避免无谓拷贝；auto 自动类型推导、decltype；Lambda 表达式（匿名函数/闭包）；nullptr 取代 NULL 表示空指针；范围 for 循环、constexpr 编译期常量、static_assert 静态断言、using 类型别名、线程库（std::thread）与原子操作。"},
+{id:88,ch:9,q:"左值引用和右值引用？",a:"左值：能取地址的表达式，可出现在赋值号左边；右值：无法取地址的临时值（常量、函数返回值、lambda 等）。左值引用 int& 绑定左值（const 左值引用可绑定右值）；右值引用 int&& 绑定右值，可延长临时对象生命周期。右值引用的意义：实现移动语义（把临时对象资源转移过来，避免深拷贝）和完美转发（std::forward）。模板中 T&&（转发引用）在类型推导时按实参是左值还是右值折叠。"},
+{id:89,ch:9,q:"C++ 中的 Lambda 表达式？",a:"Lambda 是匿名函数/闭包，语法：[捕获列表](参数列表) -> 返回类型 { 函数体 }。捕获方式：[x] 按值捕获、[&y] 按引用捕获、[=] 全部按值捕获、[&] 全部按引用捕获、[x=42] 捕获初始化。返回类型可省略（编译器推导）。常用于 STL 算法、回调、局部短函数。"},
+{id:90,ch:10,q:"Bootloader 如何将 Linux 内核装载到内存？",a:"①硬件初始化：初始化处理器、内存、外设等运行环境；②确定内核位置：根据配置/启动参数找到内核映像在存储介质（磁盘/闪存）上的位置；③加载内核到内存：读取内核映像到指定内存地址，压缩包先解压；④设置启动参数：设置根文件系统位置、调试模式、设备驱动等；⑤转交控制权：跳转到内核入口（如 start_kernel），内核接管后续初始化。常见 Bootloader：x86 用 GRUB，嵌入式用 U-Boot。五步记忆：初始化硬件 → 定位内核 → 加载解压 → 传参 → 交权。"},
+{id:91,ch:10,q:"为什么 Bootloader、内核和根文件系统需要紧密协作？",a:"三者是一条启动链路：Bootloader 完成硬件初始化、加载内核并传递启动参数（如根文件系统所在设备 /dev/mmcblk0p1），把控制权转给内核；内核启动后必须挂载根文件系统才能访问核心文件、库与配置；根文件系统为内核提供用户空间程序（如 init 进程）的运行环境，负责后续服务启动。缺一环系统都无法正常启动——根文件系统挂载失败会卡在内核 panic。记忆：每个环节互相依赖、缺一不可。"},
+{id:92,ch:10,q:"启动过程中 panic 或 hang 怎么排查？",a:"四步走：①先分类型：panic 有输出（Kernel panic/Oops + 寄存器与栈回溯）直接看报错定位；hang 无输出要先抓输出。②抓输出：GRUB 界面按 e 编辑内核参数——去掉 quiet/splash、加 loglevel=7、console=ttyS0,115200 与 earlyprintk 把早期日志导到串口、加 panic=10 防报错一闪而过、加 rd.break 进入 initramfs 临时 shell、加 systemd.log_level=debug。③按启动三阶段定位：固件/Bootloader 阶段（黑屏反复重启查 BIOS/UEFI、Secure Boot）；内核+initramfs+根文件系统阶段（panic 高发区，报 VFS: Unable to mount root fs 查 fstab UUID、重建 initramfs）；systemd/用户态阶段（emergency.target 先进系统、journalctl -b -1 看上次日志）。④hang 特有手段：看最后一行输出停在哪、Alt+SysRq+T 看任务栈、W 看阻塞进程、B 强制重启；事后取证用 journalctl/dmesg/Live 环境 chroot/kdump。"},
+{id:93,ch:10,q:"用户态与内核态的区别？",a:"用户态是应用程序运行的低权限模式，只能访问被允许的资源，不能直接操作 CPU、内存、I/O 设备；内核态是操作系统运行的最高权限模式，可执行特权指令直接控制硬件。区分原因：安全性（用户程序无法破坏内核）、稳定性（用户程序崩溃不影响系统）、性能（特权操作集中内核避免反复权限检查）。切换代价：上下文切换——保存/恢复 CPU 寄存器、切换内存空间，可能触发调度，开销较大，所以要减少不必要的系统调用和中断。记忆：每次系统调用都是用户态→内核态→用户态的往返，频繁调用性能差。"},
+{id:94,ch:10,q:"系统调用是什么？基本流程？",a:"系统调用是操作系统提供给应用程序与内核交互的接口，是用户空间进入内核的唯一通道。流程：①用户态调用库函数（read()/write()）→ ②库函数通过中断/软中断等机制切换到内核态 → ③内核按系统调用号查系统调用表（Syscall Table）执行对应内核函数（文件读写、进程创建等）→ ④结果返回用户态。常见系统调用：open()、read()、write()、close()、fork()、exec()。例：open(\"example.txt\", O_RDONLY) 返回 fd；read(fd, buffer, size) 读取。"},
+{id:95,ch:10,q:"系统调用的四大作用？",a:"①实现用户态与内核态切换（机制角度）：系统调用是触发切换的入口，用户态发起 syscall 后 CPU 陷入内核态执行、处理完返回；②提供资源访问（目的·I/O 类）：应用不能直接碰硬件，读文件、发网络包、操作设备都由内核代劳，fopen/fread 只是 C 库封装、底层仍走 open/read；③封装操作系统服务（更大的筐）：内核把进程管理、内存管理、文件系统、网络等能力打包成接口，如 getpid()；④支撑进程间通信（服务中的重点）：管道、消息队列、共享内存等 IPC 也是内核实现的服务，面试高频单独强调，如 pipe()、shmget()。"},
+{id:96,ch:10,q:"read()/write() 系统调用，内核具体做了什么？",a:"①传参（入口）：用户空间调用 read()/write() 经系统调用陷入内核，传入文件描述符、缓冲区、字节数；②查系统调用号：按号找到对应函数如 sys_read()/sys_write()；③找文件对象：根据 fd 找到内核文件表项，得到文件位置、类型等元数据；④读操作：先查页缓存（page cache），命中直接返回，未命中发磁盘 I/O，数据先读到内核缓冲区再拷贝给用户；写操作：数据从用户空间拷贝到内核空间，经文件系统层落盘；⑤多层处理：缓存管理、块设备管理、设备驱动程序逐层参与；⑥返回：把结果（如实际读写字节数）返回用户空间。加分点：页缓存是内核读得快的原因——第一次读盘，之后都命中缓存。"},
+{id:97,ch:10,q:"用户空间与内核的通信方式？",a:"本质通道只有「系统调用」一种，其他都是它的上层表现形态：系统调用（open/read/close 请求特权操作）；文件接口（C 标准库封装，内部调 open/read/write）；procfs（虚拟文件系统反映进程与内核状态，如 /proc/cpuinfo，读写仍走系统调用）；sysfs（反映设备与驱动属性，如 /sys/class/net/eth0/address 拿 MAC）；共享内存（多个进程共享一块内存区域，最快 IPC，shmget/shmat 本身是系统调用，需配合信号量/互斥锁同步）；设备文件（把硬件设备抽象成文件，open(\"/dev/ttyS0\") 访问串口）。记忆：系统调用是内核唯一的大门，其他方式只是以什么样子敲门。补充：中断/异常是被动交互路径；vDSO 让 gettimeofday 等少数调用不陷入内核。"},
+{id:98,ch:10,q:"中断发生的过程和处理流程？",a:"①硬件触发中断：外部设备（键盘、硬盘、网卡）或内部异常（除零、内存访问错误）向中断控制器发请求信号；②中断请求处理：中断控制器把请求传给 CPU，CPU 按优先级判断是否响应，响应则暂停当前程序；③调用中断处理程序：CPU 根据中断号查中断向量表得到入口地址，先把当前程序状态（PC、寄存器等）压栈保存，再跳转到中断处理程序；④中断处理：执行中断逻辑——保存寄存器状态、响应 I/O 请求、更新数据结构等；⑤恢复执行：处理完毕从栈恢复现场，CPU 继续执行被中断的程序。记忆：硬件触发 → 请求处理 → 调用处理程序 → 处理事件 → 恢复执行。"},
+{id:99,ch:10,q:"中断上下文的概念和特点？",a:"中断上下文是 CPU 执行中断服务例程（ISR）时的运行状态。特点：①特权级别高：ISR 运行在内核/特权模式，可直接访问硬件和系统资源；②无线程调度：不能挂起、切换线程，阻塞性操作（等锁、等资源）不允许，不能睡眠；③执行优先级高：ISR 优先于普通线程执行；④独立栈和寄存器：ISR 使用独立栈，寄存器状态中断发生时保存、结束后恢复；⑤响应性要求：ISR 必须简短高效，避免阻塞操作。记忆：中断上下文无进程归属、不可调度、不能睡眠、用独立中断栈；中断里只能用自旋锁（忙等），不能用信号量/互斥锁（可能睡眠）。比喻：中断上下文是手术室环境，ISR 是医生。"},
+{id:100,ch:10,q:"为什么中断需要尽快执行？",a:"①减少延迟：实时系统（汽车控制、医疗设备）要求及时响应外部事件，中断响应延迟可能导致控制失效；②避免资源占用：ISR 优先级高，长时间占 CPU 会挤压其他任务，导致任务调度失衡、数据丢失；③保持硬件稳定性：设备有内部时钟/超时限制，中断处理过长会导致设备状态超时或失效（如传感器读取、外设同步）。结论：中断服务程序要短、快、高效——实践中常「中断里只置标志位，具体处理放到任务/下半部」。"},
+{id:101,ch:10,q:"Linux 内核同步方式总结？",a:"中断屏蔽（local_irq_save 关中断，临界区极短的内核操作）；原子操作（atomic_fetch_add，计数器、标志位等简单共享数据）；自旋锁（获取失败忙等，临界区很短、不能睡眠的上下文如中断）；读写自旋锁（读并发、写独占，读多写少短临界区）；信号量（计数器 down/up，获取不到可睡眠，临界区长、允许睡眠）；读写信号量（读并发写独占、允许睡眠）；顺序锁 Seq 锁（写者更新序列号，读者比对一致性不一致重试，读极频繁写极少）；大内核锁 BKL（已被淘汰，仅需了解）。主线：能睡眠用信号量，不能睡眠用自旋锁；读多写少用读写锁/顺序锁；简单计数用原子操作。"},
+{id:102,ch:10,q:"虚拟内存和物理内存的区别？",a:"物理内存是真实存在的 RAM，大小固定受硬件限制、所有进程共享、CPU 直接访问；虚拟内存是操作系统为每个进程提供的独立抽象地址空间，可超过物理内存容量（配合磁盘交换 paging/swapping）、进程间隔离互不可见、经 MMU 和页表映射访问。为什么要虚拟内存：①扩展容量（物理内存不足时把不常用页换到磁盘）；②内存隔离（一个进程崩溃不影响其他进程）；③简化程序设计（程序员面对连续虚拟地址空间）；④提高性能（把访问频繁的页留在物理内存，减少磁盘 I/O）。工作原理：分页机制（虚拟内存按 4KB 页划分与物理页框一一映射）+ 页面交换 + MMU（硬件做地址转换）。"},
+{id:103,ch:10,q:"页表及意义？",a:"页表是记录虚拟页与物理页框映射关系的数据结构，是虚拟内存的实现基石。①映射：把进程虚拟地址映射到物理地址，每个虚拟页（4KB）对应一个物理页框；②内存管理：按需加载——只把实际用到的页调入物理内存，提高利用率；③内存保护：页表项含读/写/执行权限位，防止进程越界访问（如用户进程不能访问内核空间）；④虚拟化支持：多个虚拟机各有独立页表，隔离内存防止冲突。为什么要有页表：支撑虚拟内存、提高内存利用率、提供隔离与保护、简化程序设计、支持多任务多进程（每进程独立页表互不干扰）。"},
+{id:104,ch:10,q:"虚拟地址到物理地址的映射？",a:"虚拟地址由「虚拟页号 VPN + 页内偏移」组成（32 位、页大小 4KB：高 20 位 VPN，低 12 位页内偏移）；CPU 用虚拟页号查页表得到物理页框地址，拼接页内偏移得到最终物理地址。x86 32 位两级转换：CR3 寄存器存页目录基址 → 线性地址拆成「页目录索引 10 位 + 页表索引 10 位 + 页内偏移 12 位」→ 页目录项指向页表 → 页表项指向物理页框 → 加偏移得物理地址。进程切换时 CR3 更新为新进程的页目录——这解释了为什么进程切换比线程切换慢（线程切换地址空间不变，页表不用换）。"},
+{id:105,ch:10,q:"段页式内存管理有何优点？",a:"结合段式与页式的优点，按程序逻辑分段、段内分页。①灵活性：段代表程序逻辑结构（代码段、数据段、堆栈段），段内再分页细粒度管理，段大小可动态增长，既避免段式的外部碎片又避免页式的内部碎片；②保护性：段级和页级都可设访问权限，各进程段表/页表独立无法访问其他进程内存，段界限检查可防止越界溢出；③共享性：多个进程可共享相同段（共享库、代码段），避免重复存储；④虚拟化支持：通过段表+页表实现虚拟地址映射，支持超大地址空间、减少碎片、提升隔离性。"},
+{id:106,ch:10,q:"LRU 算法及其实现方式？",a:"LRU（最近最少使用）是页面置换算法，淘汰最久未使用的页，利用局部性原理保留近期访问的页。实现用「双向链表 + 哈希表」，get/put 都是 O(1)：链表头部是最近访问的页、尾部是最久未访问的页，哈希表用于 O(1) 定位节点。访问逻辑：①页已在链表中：删掉再插到头部（标记最近访问）；②不在且缓存未满：直接插头部；③不在且缓存已满：淘汰尾部节点，新页插头部。优缺点：命中率高、直观；但需要额外数据结构、实现复杂度高、无法预判未来访问。面试手撕口诀：链表管顺序、哈希表管定位，双向链表保证删除 O(1)。"},
+{id:107,ch:10,q:"什么是文件系统？",a:"文件系统是操作系统管理、存储和组织数据的机制，把磁盘原始数据组织成文件和目录。①存储管理：以数据块为基本单位，负责空间的分配与回收；②文件组织：用树形目录结构组织文件，支持创建、删除、重命名、移动；③访问控制：通过权限（POSIX rwx / ACL）控制读、写、执行；④文件操作与管理：复制、移动、压缩、属性查询；⑤共享与备份：支持多用户共享（NFS、Samba）、备份恢复。关键概念：文件描述符、目录、inode（描述文件元数据：权限、大小、数据块位置）、块分配策略。常见类型：Ext4（Linux）、NTFS（Windows）、FAT32（单文件上限 4GB）、XFS（高性能日志文件系统）。"},
+{id:108,ch:10,q:"文件 I/O、文件描述符和 inode？",a:"Linux 一切皆文件。文件 I/O：对文件读写的操作，核心系统调用 open()/read()/write()/close()；文件描述符 fd：内核返回的非负整数，本质是进程「文件描述符表」的索引，应用程序不直接操作文件、只通过 fd 找文件；0/1/2 特殊 fd：标准输入/标准输出/标准错误，之后新打开的文件从 3 开始编号；文件描述符表：每进程一张，fd 是表索引，表项指向内核文件表（含状态标志、读写偏移量、引用计数、inode 指针）；inode：描述文件信息的数据结构，记录大小、权限、类型、数据块位置，文件名不是 inode。定位流程：文件名 → inode 编号 → inode → 数据块位置 → 文件数据。"},
+{id:109,ch:10,q:"标准 I/O 和文件 I/O 有什么区别？",a:"文件 I/O 是 Linux 系统调用（open/read/write），操作对象是文件描述符 fd，用户空间无标准 I/O 缓冲；标准 I/O 是 C 标准库对文件 I/O 的封装（fopen/fread/fwrite），操作对象是 FILE* 流指针，用户空间维护 stdio 缓冲区（带缓冲 I/O）、可移植性好。调用链：应用程序 → 标准 I/O（fopen/fread/fwrite）→ C 标准库 → 文件 I/O（open/read/write）→ Linux 内核。"},
+{id:110,ch:10,q:"硬链接和软链接有什么区别？",a:"硬链接与源文件共享同一个 inode，是「一个文件多个名字」：直接指向同一份文件数据，删除源文件数据不立即删除（其他硬链接仍可访问），链接计数记录硬链接数量；软链接（符号链接）是独立文件、存的是源文件路径：指向路径再经路径找到源文件，更像 Windows 快捷方式，删除源文件后软链接失效成为悬空链接，不增加源文件链接数。一句话记忆：硬链接相当于「一个文件有多个名字」；软链接更像 Windows 快捷方式。"},
+{id:111,ch:10,q:"Linux 五种 I/O 模型？",a:"①阻塞 I/O：数据没准备好就一直等，编程简单逻辑直观但等待时无法做其他事；②非阻塞 I/O：没数据立即返回、程序轮询，不长时间卡住但频繁轮询耗 CPU；③I/O 多路复用：一个线程同时监听多个 fd，select/poll/epoll，适合大量连接；④信号驱动 I/O：发起后做其他事，事件发生时内核发信号通知，在信号处理函数里收数据（还要自己读）；⑤异步 I/O：发起后做其他事，I/O 完成后再通知（内核帮你读完，最省心）。区别在于「数据没准备好时怎么办、由谁通知」。高频追问 I/O 多路复用：区分「信号驱动」是事件发生时通知，「异步 I/O」是完成时通知。"},
+{id:112,ch:10,q:"select、poll 和 epoll 有什么区别？",a:"select：fd_set 位图集合，fd 数量默认约 1024 受限，每次调用都遍历全部 fd、且每次调用都要在用户态/内核态间拷贝集合，仅水平触发，适合少量 fd；poll：pollfd 数组，去掉数量限制（无固定上限），但同样遍历整个数组、同样需要拷贝，适合少量到中等 fd；epoll：内核事件表（红黑树 + 就绪链表），上限取决于系统最大打开文件数，只处理就绪的 fd 不遍历全部，fd 注册进内核后无需反复拷贝，支持水平/边缘触发，适合高并发大量 fd。epoll 三个接口：epoll_create() 创建实例、epoll_ctl() 增删改注册 fd、epoll_wait() 等待就绪事件。"},
+{id:113,ch:10,q:"epoll 为什么比 select 高效？LT 和 ET 有什么区别？",a:"高效三板斧：①减少重复拷贝：fd 通过 epoll_ctl 注册后由内核维护，不像 select 每次调用都重传整个集合；②减少遍历开销：select 即使 10000 个 fd 只有 3 个就绪也要全查，epoll 只处理发生事件的 fd（就绪链表）；③数量限制不同：epoll 上限远大于 select 的 1024，适合高并发。LT 水平触发（默认）：只要 fd 仍处于就绪状态就持续通知，没处理完下次还会再通知，逻辑简单不容易漏事件；ET 边缘触发：只在状态发生变化的时刻通知一次，程序必须把数据处理干净（持续读写直到 EAGAIN，通常要配非阻塞 fd），效率更高但使用难度大。记忆：LT「只要还有数据就继续提醒你」；ET「状态变了我提醒一次，剩下的你自己处理干净」。"},
+{id:114,ch:10,q:"查看进程的命令？",a:"ps aux：查看所有进程，含 PID、PPID、CPU/内存占用（a 所有用户、u 用户信息、x 无控制终端的进程）；ps -u 用户名：查看指定用户的所有进程；ps -ef | grep 进程名：按名称过滤查找（-e 全部、-f 详细信息）；ps -eJH：树形显示进程层级（-j 显示 PID/PPID，-H 树状）；top：实时监控进程和系统性能，可交互排序。记忆：静态快照用 ps、实时监控用 top。"},
+{id:115,ch:10,q:"Linux 系统中调试崩溃问题的流程？",a:"六步走：①收集崩溃信息：收集核心转储文件（core dump）和系统日志；②分析核心转储：用 GDB 打开 core 文件，查看崩溃位置和堆栈回溯；③查看系统日志：检查日志文件，找与崩溃相关的错误信息；④重现崩溃：尽可能复现，便于反复调试；⑤使用调试器：用 GDB 附加到崩溃进程或直接调试；⑥跟踪执行流：单步调试、查看变量值、栈回溯，定位根因。"},
+{id:116,ch:10,q:"RTOS 与 Linux 的区别？",a:"本质区别是实时性：RTOS 保证任务在严格时间内完成（确定性响应），Linux 追求通用性和吞吐量、不保证实时。RTOS（如 FreeRTOS）：优先级调度（高优先级任务优先）、资源开销轻、响应延迟低，适用于工业控制、汽车电子、航空航天、医疗；Linux（如 Ubuntu）：基于时间片调度（如 CFS）、开销较大需要更多内存与算力、延迟较高且不确定，适用于桌面、服务器、通用嵌入式。补充：Linux 通过 PREEMPT-RT 补丁可提供一定实时能力，但非原生严格实时。"},
+{id:117,ch:11,q:"进程、线程及之间的区别？",a:"进程是资源分配的基本单位：正在运行的程序实体，拥有独立地址空间（代码/数据/堆/栈）和系统资源，进程间不共享资源相互独立，创建/销毁/切换开销大，通信需 IPC（管道、消息队列、共享内存等）；线程是 CPU 调度的最小单位：进程内的实际执行单元，同一进程的多个线程共享进程的地址空间与资源，但各有自己的栈、寄存器和局部变量，创建/销毁/切换开销小，可直接访问共享内存通信高效。为什么线程切换比进程切换快：进程切换要切换整个页表（地址空间换了），线程切换只换寄存器和栈指针、地址空间不动页表不用换。线程崩溃拖垮整个进程（信号发给整个进程）；进程崩溃不影响其他进程（地址空间隔离）。"},
+{id:118,ch:11,q:"进程/线程选用的时机？",a:"使用进程：需要独立地址空间和较强的数据隔离（浏览器多标签、数据库与 Web 服务分离）；需要更高的安全性和稳定性（系统进程与用户进程隔离）；多核并行计算、大规模数据处理（进程可独立跑在不同 CPU 核心）。使用线程：多个任务需要频繁共享数据和资源（Web 服务器多线程共享数据库连接池）；轻量级任务且需要频繁切换（GUI 程序按钮事件处理）；实时性要求高、需要快速响应（音视频处理、游戏开发）。一句话：需要隔离、稳定、并行计算用进程；需要共享数据、轻量任务、高实时响应用线程。"},
+{id:119,ch:11,q:"多进程、多线程的优缺点？",a:"多进程优点：独立性（崩溃隔离）、安全性（内存隔离）、可扩展性（支持分布式部署）；缺点：开销大（创建、切换、内存维护）、通信复杂（需 IPC，编码维护繁琐）。多线程优点：轻量级（创建切换开销小）、资源共享（连接池、缓存可共享）、响应性好（后台线程不阻塞主线程）；缺点：安全性问题（数据竞争需锁机制 mutex/rwlock/semaphore）、内存占用（每线程独立栈和 TCB）、上下文切换仍有开销。选型：高并发且任务间需强隔离 → 多进程；任务轻量、需要共享数据、需要实时响应 → 多线程。"},
+{id:120,ch:11,q:"内核线程和用户线程的区别？",a:"内核线程：由操作系统内核创建和管理、内核调度器调度，可直接访问内核资源（系统调用、硬件设备），可分配到多个 CPU 上并行执行，但创建销毁和切换需陷入内核、开销大；用户线程：由用户应用程序自行管理、在用户空间运行，创建销毁和切换在用户态完成（开销小），但只能访问用户空间资源、只能在单个 CPU 上执行、一个线程阻塞导致整个进程阻塞。现代操作系统普遍采用混合模式：内核支持多线程，用户层再做轻量级调度。用户线程最大缺点：一个线程阻塞导致整个进程阻塞。"},
+{id:121,ch:11,q:"进程的状态？",a:"Linux 六种状态：就绪态（已准备好等待 CPU 调度，位于就绪队列，时间片用完回到此状态）、运行态（正在 CPU 上执行）、僵尸态（进程已终止但父进程未调用 wait()/waitpid() 回收，资源已释放但 PCB 仍占进程表条目）、可中断睡眠（浅度睡眠：等待事件或资源，可被信号唤醒，如等 I/O 收到 SIGINT 可唤醒）、不可中断睡眠（深度睡眠：等待外部资源不能被信号中断，如等硬盘 I/O）、暂停态（收到 SIGSTOP 暂停，不消耗 CPU，SIGCONT 恢复）。状态转换：就绪→运行（调度器分配 CPU）；运行→就绪（时间片用完或被抢占）；运行→睡眠（等待资源）；睡眠→就绪（条件满足）；运行→僵尸（父进程未回收）；暂停→就绪（SIGCONT）。通用五状态模型：创建/就绪/运行/阻塞/终止。区分：Linux 六状态多了僵尸和暂停，把阻塞细分为可中断/不可中断睡眠。"},
+{id:122,ch:11,q:"fork() 函数的作用？写时复制 COW？",a:"fork() 是 Linux 创建进程的系统调用，复制父进程生成几乎完全相同的子进程，并返回两次区分父子：父进程返回子进程 PID（>0），子进程返回 0，失败返回 -1。子进程继承内存内容、文件描述符等，但拥有独立 PID 和地址空间。写时复制 COW：fork 时并不立即复制父进程全部内存，而是让父子先共享同一批物理内存页并标记只读；某一方真正写入时才触发页错误异常、由操作系统复制这一页，父子各自指向不同物理页并改为可读写。优点：避免无意义拷贝（fork 后通常紧接着 exec）、节省内存（代码段/只读常量共享）、fork 极快（只复制页表结构 + 标记 COW）。记忆：先共享，用的时候再分家；能不复制就不复制，真要写了才复制。"},
+{id:123,ch:11,q:"父进程与子进程的关系及区别？",a:"父进程通过 fork() 创建子进程：fork 返回两次——父进程得到子进程 PID，子进程得到 0；子进程继承父进程的文件描述符、环境变量、当前工作目录等，共享代码段，但数据段、堆、栈各自独立、不共享存储空间；父子进程可并行执行不同代码路径，子进程可再创建自己的子进程形成进程树。区别：PID 不同、PCB 独立、内存空间独立（仅共享代码段）。通信：父子进程通过 IPC 交换数据，最常用管道（pipe）。"},
+{id:124,ch:11,q:"孤儿进程、僵尸进程、守护进程？",a:"孤儿进程：父进程先终止、子进程继续运行，被 init 进程（PID=1）收养接管并负责回收，不会泄漏资源；僵尸进程：子进程已终止但父进程未调用 wait()/waitpid() 回收退出状态，不执行任何操作但仍占用进程表条目（PCB）和进程号，父进程调用 wait() 后才被彻底清除；守护进程：系统常驻服务进程，独立于终端后台运行，无控制终端、不与用户交互，负责日志、定时任务、服务管理等。守护进程实现步骤：①fork() 创建子进程父进程退出；②创建新会话 setsid 脱离控制终端；③umask 置 0；④工作目录切换到根目录 /；⑤关闭所有文件描述符。"},
+{id:125,ch:11,q:"Linux 信号有哪些？如何处理僵尸进程？",a:"信号是操作系统发给进程的事件通知机制。常见信号：SIGHUP 终端挂起/连接断开（常用于重载配置）、SIGINT 程序中断（Ctrl+C）、SIGFPE 算术异常（除 0）、SIGKILL 立即终止（不能被捕获/处理/忽略，强制结束）、SIGALRM 定时信号（配 alarm()）、SIGTERM 正常结束（kill 默认信号，优先于 SIGKILL）、SIGCHLD 子进程结束时通知父进程（与僵尸处理关系密切）、SIGSTOP/SIGCONT 暂停/继续。避免僵尸：①父进程及时调用 wait()/waitpid() 回收；②注册 SIGCHLD 信号处理函数，收到信号后回收（事件驱动，不浪费父进程时间）。清理已有僵尸：不能 kill 僵尸进程（已死只留 PCB），只能杀它的父进程让 init（PID=1）收养回收；查看用 ps aux | grep Z。"},
+{id:126,ch:11,q:"进程调度算法？Linux 实际用什么？",a:"常见算法：FCFS 先来先服务（按到达顺序非抢占，实现简单无饥饿，但长进程阻塞短进程、平均等待时间长）；SJF 短作业优先（执行时间短的先，理论最小化平均等待，需预知时间、长作业饥饿）；SRTF 最短剩余时间优先（SJF 抢占版，动态最小化平均等待）；优先级调度（高优优先，低优可能饥饿用老化解决）；RR 时间片轮转（固定时间片轮流，公平无饥饿，时间片过小切换开销大）；HRRN 最高响应比（响应比=(等待+服务)/服务，综合 FCFS 与 SJF 优点避免饥饿）；多级反馈队列（多队列不同时间片，超时降级到下一队列，短进程快长进程不饥饿，现代系统常用思想）。Linux 实际：2.6.23 前 O(1) 调度器；2.6.23~6.5 用 CFS 完全公平调度器（vruntime + 红黑树，选 vruntime 最小的跑）；6.6+ 用 EEVDF（引入虚拟截止时间）。用户只能微调：nice 值、调度策略（SCHED_OTHER/FIFO/RR）、CPU 亲和性。"},
+{id:127,ch:11,q:"进程上下文？",a:"进程上下文是操作系统执行一个进程所需的全部状态信息集合。组成：程序计数器 PC、CPU 寄存器、进程状态、堆栈、PID、内存管理信息（页表等）、文件描述符和 I/O 状态。切换时机：调度器把 CPU 分配给另一进程（时间片用完）、进程阻塞等待资源（如 I/O）、进程终止。切换过程：保存当前进程上下文 → 选择下一个要运行的进程 → 恢复下一个进程的上下文。进程上文：从用户态切换到内核态时保存的用户态状态（寄存器、PC、栈），用于系统调用/中断处理后恢复；进程下文：进程在内核态执行所需的状态（内核栈及系统调用/中断上下文）。要点：上下文切换效率直接影响系统性能；线程共享地址空间，切换更轻。"},
+{id:128,ch:11,q:"并发、同步、异步、互斥、阻塞、非阻塞？",a:"并发：多个任务在同一时间段内交替执行（时分复用时间片，单核也能实现），与并行（同一时刻同时执行、需多核）不同；同步：协调多个任务的执行顺序和行为保证数据一致，用锁、信号量、条件变量控制依赖关系；异步：任务不必等待其他任务完成独立执行，完成时通过回调/事件通知，常用于 I/O、网络请求避免阻塞 UI；互斥：同一时刻只有一个任务能访问共享资源，用互斥锁、信号量实现避免数据冲突；阻塞：任务等待条件时暂停执行，不消耗 CPU，条件满足后继续；非阻塞：任务不暂停等待立即返回继续执行，通过轮询、回调检查状态。"},
+{id:129,ch:11,q:"线程同步与互斥？常见同步机制？",a:"线程同步是更广泛的概念：确保多线程按预定顺序和规则协调工作；线程互斥是同步的一种特殊形式：确保同一时刻只有一个线程访问共享资源（用互斥锁保护临界区，其他线程阻塞等待锁释放）。常见机制：临界区（一段代码同一时刻只能被一个进程/线程执行）；互斥锁 Mutex（保护共享资源，获取不到则阻塞等待）；信号量 Semaphore（本质是计数器，控制同时访问数量，初值 N 表示最多 N 个线程同时访问）；条件变量（等待/通知模式，通常与互斥锁配合）；读写锁（允许多个线程同时读、只允许一个线程写，读多写少场景性能优于互斥锁）；信号 Signal（异步通知事件发生，适合通知不适合传大量数据）；事件 Event（唤醒所有等待线程）；屏障 Barrier（所有线程到达屏障点再一起继续）；管程 Monitor（高级同步机制，内部用条件变量实现）。"},
+{id:130,ch:11,q:"互斥锁与自旋锁的区别？",a:"互斥锁拿不到锁就阻塞睡眠，由操作系统调度唤醒，适合锁持有时间长、竞争激烈的场景——避免忙等浪费 CPU，但阻塞/唤醒有上下文切换开销；自旋锁拿不到锁就原地自旋忙等（循环检查锁状态），适合锁持有时间很短、竞争少的场景——避免阻塞/唤醒的上下文切换开销，但锁持有时间长或竞争激烈时浪费 CPU。面试追问：中断上下文里只能用自旋锁，因为中断处理程序不能睡眠（不可阻塞），互斥锁会触发调度。"},
+{id:131,ch:11,q:"互斥量能否在进程中使用？加锁在驱动层还是应用层？",a:"可以。①命名信号量：通过 sem_open 创建可被多个进程共享的命名信号量，用 sem_wait/sem_post 控制临界区访问；②共享内存中的互斥量：在共享内存中创建互斥量，多个进程通过 shmget 获取共享内存并使用其中的互斥量同步。目的：确保同一时刻只有一个进程能访问共享资源。加锁层次判断：跨进程/跨设备访问的资源（多个不同进程/线程访问同一驱动设备如 SPI、I2C、GPIO 寄存器，保护硬件资源或内核缓冲区）→ 驱动层加锁（短临界区用自旋锁 spinlock、可睡眠等待用互斥锁 mutex）；同一进程内的多个线程访问共享变量、数据结构 → 应用层加锁（pthread_mutex、pthread_rwlock、条件变量）。"},
+{id:132,ch:11,q:"如何处理多进程内存共享的问题？",a:"共享内存必须配合同步机制：①互斥锁 Mutex：pthread_mutex_lock/unlock 保证同一时刻只有一个进程/线程访问共享资源，避免竞争条件；②信号量 Semaphore：sem_wait/sem_post 控制同时访问数量（初始值设 1 即退化为互斥）；③条件变量 Condition Variable：pthread_cond_wait/signal 在特定条件满足时唤醒等待线程，避免忙等待；④IPC：管道、消息队列、共享内存、套接字等进程间通信机制，其中共享内存效率最高但必须配合互斥锁/信号量解决竞争。"},
+{id:133,ch:11,q:"死锁与活锁？死锁四个必要条件？预防策略？",a:"死锁：互相等待对方释放资源、全部停滞，四个必要条件——互斥（资源同一时刻只能一个进程使用）、请求保持（持有资源的同时请求其他资源且不释放）、不可剥夺（已获得的资源不能被强行剥夺）、环路等待（多个进程形成循环等待链，A 等 B、B 等 C、C 等 A）。记忆口诀：「互求不等」。活锁：没有等待但不断释放/获取资源互相谦让，线程在运行状态但始终无实际进展（A 释放 X 等 Y，B 释放 Y 等 X，反复谦让）。死锁解决：需外部干预（终止或重启进程）；预防：破坏四个必要条件之一（允许共享/并发访问、请求新资源前先释放已有、允许操作系统强制剥夺、资源统一编号按顺序请求或用银行家算法）。活锁解决：引入随机性、退让策略、调整线程优先级。"},
+{id:134,ch:11,q:"Linux 进程间通信（IPC）有哪些方式？",a:"七种：①无名管道 Pipe：半双工数据单向流动，只能用于有亲缘关系（父子）进程，简单易用内核缓存实现，容量有限、面向字节流；②有名管道 FIFO：半双工、可无亲缘关系进程借助文件系统通信；③消息队列：内核维护的消息链表、传递一条条结构化消息，克服信号信息少和管道无格式字节流的缺点，异步通信，但信息复制需额外 CPU 消耗；④共享内存：映射一段内存到多个进程地址空间直接访问，最快的 IPC 方式（其他 IPC 要两次拷贝+陷入内核，共享内存零拷贝），但需自行解决同步互斥（配合信号量）；⑤信号 Signal：异步通信、只能通知事件不能传大量数据；⑥信号量 Semaphore：计数器、作为锁机制控制并发访问数量、不能传复杂消息只能同步；⑦Socket：基于网络协议，既可本机进程通信也可跨主机。面试追问：哪种效率最高？共享内存——减少数据复制。"},
+{id:135,ch:11,q:"进程通信中的管道是如何实现的？",a:"通过 pipe() + fork()：①pipe(fd) 得到两个文件描述符——fd[0] 读端、fd[1] 写端；②fork() 后子进程继承父进程的文件描述符，父子进程都拥有读写端；③关闭不需要的一端：父进程负责写则 close(fd[0])，子进程负责读则 close(fd[1])；④写入数据：父进程 write(fd[1], data, size)；⑤读取数据：子进程 read(fd[0], buf, size)；⑥通信完成：各自 close 保留的 fd，父进程可 wait() 等待子进程结束。典型流程：pipe() → fork() → 关闭不需要的一端 → write()/read() → close() → wait()。"},
+{id:136,ch:11,q:"一个进程多次 open 同一个文件会发生什么？",a:"得到多个不同的文件描述符（fd1 != fd2），各自的读写偏移量相互独立（fd1 读取 10 字节不会影响 fd2 自己维护的偏移量，两个 fd 保存各自独立的文件操作状态），关闭时需要分别 close(fd1)、close(fd2)；不会在磁盘上生成多个文件，它们对应同一个磁盘文件（同一个 inode）。"},
+{id:137,ch:12,q:"TCP/IP 四层模型及各层功能？",a:"TCP/IP 是一个用于网络通信的协议集，四层从高到低：应用层（提供用户与网络之间的接口、负责应用程序之间的通信，将用户需求转化为网络通信请求：HTTP、FTP、SMTP、DNS、Telnet、POP3/IMAP）→ 传输层（负责端到端通信，确保数据可靠传输、处理顺序/完整性/错误校验，数据分割成小段每段含序列号和校验信息，出错重发：TCP、UDP）→ 网络层（处理数据包的寻址和路由，封装和寻址：IP、ICMP、ARP）→ 网络接口层（将数据从计算机发送到物理网络，处理物理媒介和数据链路通信：Ethernet、Wi-Fi、PPP、FDDI）。口诀（发送方向）：应用「开口」→ 传输「打包」→ 网络「指路」→ 接口「上车」；服务器回包则反着来。"},
+{id:138,ch:12,q:"TCP/IP 与 OSI 七层模型对比？",a:"OSI 七层从下到上：物理层 → 数据链路层 → 网络层 → 传输层 → 会话层 → 表示层 → 应用层。TCP/IP 将其压缩合并为四层。对比：TCP/IP 4 层是实际应用标准，OSI 7 层是理论标准；TCP/IP 重点端到端通信，OSI 强调层次和抽象概念。对应关系：TCP/IP 应用层 ≈ OSI 应用层+表示层+会话层（HTTP、FTP、DNS）；传输层 = 传输层（TCP、UDP）；网络层 = 网络层（IP、ICMP、ARP）；网络接口层 ≈ 数据链路层+物理层（Ethernet、PPP、FDDI）。小结：TCP/IP 简洁适用于互联网等分布式环境，OSI 详细是网络教学和理论学习的模型。"},
+{id:139,ch:12,q:"TCP 的作用和特点？",a:"TCP 是面向连接的传输层协议，提供可靠的数据传输，确保数据包按正确顺序到达。四大机制：①可靠性：通过重传机制确保丢失的包被重新发送；②顺序控制：通过序列号确保数据按正确顺序到达；③流量控制：通过窗口机制控制数据流，防止网络过载；④拥塞控制：在网络拥堵时通过减少数据发送速率缓解拥塞。缺点：开销大、速度相对慢。适用场景：文件传输、网页浏览、电子邮件等要求高可靠性的场景。"},
+{id:140,ch:12,q:"IP 的作用和特点？",a:"IP 是网络层协议，负责根据目标 IP 地址将数据包从源设备传递到目标设备，使用唯一的 IP 地址标识每个设备，通过路由器将数据包从一个网络传递到另一个网络。特点：①寻址：为每个设备分配唯一的 IP 地址，用于网络间的标识；②路由：通过路由器确定数据包的传输路径；③分片与重组：根据目标网络的最大传输单元（MTU）将较大的数据包分片，并在目标设备处重新组合。TCP 和 IP 相辅相成：TCP 提供可靠的传输保障，IP 负责数据的路由和寻址，二者结合提供端到端的数据传输，支撑 Web 浏览、电子邮件、文件传输等互联网应用。"},
+{id:141,ch:12,q:"TCP 报文格式关键字段？",a:"源端口（16 位，标识发送端应用程序/服务）；目的端口（16 位）；序列号（32 位，标识数据报文顺序）；确认号（32 位，表示期望接收的下一个字节序列号）；数据偏移（4 位，TCP 头部长度）；保留位（6 位）；控制位（6 位）；窗口大小（16 位，接收方缓冲区大小用于流量控制）；校验和（16 位，检查 TCP 头部和数据的完整性）；紧急指针（16 位，仅 URG=1 时有效）；选项（可选，如最大段大小 MSS）。控制位速记：URG 紧急指针是否有效 / ACK 确认号是否有效 / PSH 接收方应尽快交给应用 / RST 重置连接 / SYN 建立连接 / FIN 关闭连接。"},
+{id:142,ch:12,q:"TCP 和 UDP 的区别与优缺点？",a:"TCP 面向连接可靠：传输前三次握手建立连接，通过序列号、确认应答、超时重传保证可靠，支持流量控制和拥塞控制，头部至少 20 字节，一对一、面向字节流，开销大速度慢，适合文件传输、网页浏览、邮件（HTTP/FTP/SMTP）；UDP 无连接不可靠：直接发送数据报、不建立连接、不保证顺序不重传，头部只有 8 字节，一对多/多对多可广播多播、面向报文，开销小延迟低效率高，适合视频流、语音通话、在线游戏（DNS/DHCP/TFTP/SNMP）。一句话：TCP 用更大的开销换取可靠+有序+可控；UDP 用放弃可靠换取低延迟+轻量高效。两者的优缺点是一体两面的——TCP 的缺点（开销大、速度慢）正是 UDP 的优点，UDP 的缺点（不可靠、不保证顺序）正是 TCP 的优点。"},
+{id:143,ch:12,q:"UDP 报文格式？",a:"8 字节头部：源端口（2 字节）、目的端口（2 字节）、报文长度（2 字节，头部+数据总长）、校验和（2 字节，检测传输错误出错则丢弃）。伪头部（仅用于校验，不传输不存储）：源 IP 地址（4 字节）+ 目标 IP 地址（4 字节）+ 协议字段（1 字节，UDP 为 17）+ UDP 长度（2 字节），与 UDP 头部一起参与校验和计算。数据长度为奇数时 UDP 在末尾补 1 字节 0（校验和按 16 位为单位计算）。典型应用：DNS（无连接高效）、DHCP（无连接广播分配 IP）、TFTP（传输小文件）、SNMP（网络设备管理）、音视频流与在线游戏（容忍少量丢包、要求快速传输）。"},
+{id:144,ch:12,q:"TCP 三次握手过程？",a:"目的：确保连接的可靠性、数据传输的完整性和双方通信准备。①第一次握手：客户端 → 服务端 SYN=1, seq=X——客户端发送 SYN 报文段请求建立连接，指定初始序列号 X，告诉服务器希望建立连接并初始化序列号；②第二次握手：服务端 → 客户端 SYN=1, ACK=1, ack=X+1, seq=Y——服务器确认收到客户端请求（ACK=X+1），同时选择自己的初始序列号 Y 并置 SYN=1，确保客户端收到确认且双方序列号同步；③第三次握手：客户端 → 服务端 ACK=1, ack=Y+1——客户端确认服务器的序列号 Y，双方序列号完成同步，都准备好开始数据传输，连接成功建立。核心目标：同步双方初始序列号、确认双方准备好，建立可靠的全双工通信。"},
+{id:145,ch:12,q:"为什么需要三次握手，两次不可以吗？",a:"第一，防止历史重复连接的初始化、避免资源浪费：客户端之前发送的 SYN 因网络阻塞长时间滞留，若只有两次握手，服务端收到旧 SYN 并回复后就认为连接建立，可能错误建立历史连接并分配资源；三次握手下客户端发现是历史连接可发 RST 终止。第二，同步双方的初始序列号 ISN：TCP 靠序列号实现数据确认、去重和排序——第一次握手客户端把 ISN 告诉服务端，第二次服务端 ACK 客户端 ISN 同时把自己的 ISN 告诉客户端，第三次客户端 ACK 服务端 ISN；如果只有两次，服务端的初始序列号无法得到客户端的确认。面试扩展：第三次 ACK 丢失时服务端超时重传 SYN+ACK；大量只发 SYN 不回应会占满半连接队列（SYN 队列），即 SYN Flood 攻击。"},
+{id:146,ch:12,q:"TCP 四次挥手过程？",a:"关闭 TCP 连接的过程，因 TCP 全双工、双方需各自独立关闭发送通道所以比三次握手多一步。①第一次挥手：客户端 → 服务端 FIN=1, seq=U——主动关闭方发送 FIN 包表示不再发送数据，但仍可接收；②第二次挥手：服务端 → 客户端 ACK=1, ack=U+1——服务器确认收到关闭请求，但仍可继续向客户端发送数据、尚未完全关闭；③第三次挥手：服务端 → 客户端 FIN=1, ACK=1, ack=U+1, seq=W——服务器处理完所有数据后发送 FIN，表示已完成数据发送准备关闭；④第四次挥手：客户端 → 服务端 ACK=1, ack=W+1——客户端确认收到关闭请求，服务器收到后连接完全关闭、释放资源。"},
+{id:147,ch:12,q:"为什么需要四次挥手，三次不可以吗？",a:"核心原因：TCP 是全双工协议，两端既能发送也能接收，关闭连接时每一方都需要独立关闭自己发送数据的通道，并保证另一方已接收到它的所有数据。客户端发 FIN 只代表客户端到服务端这个方向准备关闭，并不代表服务端没有数据发送；服务端收到 FIN 后先回 ACK 确认（如果还有数据就继续发完），之后再发自己的 FIN；客户端收到 FIN 后还要回最后一个 ACK。之所以通常是四次：服务端的 ACK 和 FIN 不一定能合并——如果服务端收到 FIN 时还有数据没发完，只能先 ACK 等发完再 FIN；如果服务端恰好无数据可发，可把 ACK 和 FIN 合并成 FIN+ACK，这种情况下三次挥手也可以正常完成。扩展：第四次挥手后主动关闭方进入 TIME_WAIT，等待 2MSL。"},
+{id:148,ch:12,q:"TIME_WAIT 状态？为什么等待 2MSL？",a:"TIME_WAIT 是主动关闭连接的一方在发送四次挥手最后一个 ACK 后进入的状态，等待 2MSL（报文最大生存时间）。两个作用：①保证连接能够可靠关闭——最后一个 ACK 可能丢失，被动关闭方没收到会重传 FIN，主动关闭方处于 TIME_WAIT 时仍能接收并重新发送 ACK；②防止旧连接的报文影响后续新连接——等待足够长时间让旧报文在网络中自然过期，避免与相同四元组的新连接混淆。为什么是 2MSL：最坏情况下最后一次 ACK 在网络中最多经历 1 个 MSL，对端因没收到 ACK 重传的 FIN 返回又最多 1 个 MSL，一来一回最多 2MSL，等待后旧连接相关报文已从网络消失。扩展：服务端重启常报 Address already in use，是客户端 TIME_WAIT 占着端口，用 SO_REUSEADDR 解决。"},
+{id:149,ch:12,q:"TCP 的可靠机制体现在哪？",a:"六大机制：①序列号和确认机制：每个数据字节有唯一序列号，接收方发确认号 ACK 告知已收并指出下一个期望字节，发送方等确认超时则重传；②超时重传机制：发送后启动定时器，预定时间未收到确认认为丢失重传，接收方收到重复数据丢弃并继续确认；③滑动窗口机制：等待确认的同时可连续发送多个数据包，窗口大小由接收方接收缓冲区决定，累计确认（即使某些 ACK 丢失，只要收到下一个 ACK 就确认前面所有数据已接收）；④拥塞控制机制：拥塞窗口控制发送速率，慢启动（指数增长提速）、拥塞避免（逐渐减少速率）、快速重传和快速恢复（收到重复 ACK 迅速重传并降速）；⑤流量控制机制：接收方在 TCP 头窗口大小字段控制发送方速率，防止缓冲区溢出；⑥数据校验和错误检测：头部校验和，接收方重新计算不匹配则丢弃请求重发。"},
+{id:150,ch:12,q:"什么是 Socket？",a:"Socket（套接字）是应用层与传输层之间的编程接口：应用程序把 socket 当作「网络文件」读写，内核负责把数据封装后交给传输层发送。一个 socket 由 IP 地址 + 端口号唯一标识一个应用程序；源 IP + 源端口 + 目的 IP + 目的端口称为「套接字对」，一对套接字就是一个 TCP 连接。关键认知：Linux 中 socket 就是一个文件描述符（fd），可以用 read/write/close 操作；TCP socket 是全双工的，内核为每个 socket 维护发送缓冲区和接收缓冲区，用户态 send/recv 本质是用户缓冲区与内核 socket 缓冲区之间的数据拷贝。这也是 IO 多路复用（select/poll/epoll 监听的就是这些 fd）的基础。"},
+{id:151,ch:12,q:"TCP Socket 编程流程？",a:"服务端：socket() 创建套接字返回监听 fd → bind() 绑定本地 IP 地址和端口 → listen() 设置允许的最大连接数进入监听状态 → accept() 阻塞等待客户端连接，成功返回一个新的已连接 fd → read()/write()（或 recv()/send()）用已连接 fd 收发数据 → close() 关闭连接。客户端：socket() 创建套接字 → 设置要连接的服务器 IP 和端口（struct sockaddr_in）→ connect() 向服务器发起连接（触发三次握手）→ send()/recv() 收发数据 → close()。易错点：listen 后的监听 fd 只负责接收新连接，accept 返回的已连接 fd 才是实际通信的 fd；客户端 connect 时本地端口由内核自动分配，一般不需要 bind。"},
+{id:152,ch:12,q:"UDP Socket 编程流程？",a:"服务端：socket() 创建套接字（SOCK_DGRAM）→ 初始化地址结构并 bind() 绑定服务器地址和端口 → recvfrom() 接收客户端数据（函数返回时带回客户端地址）→ sendto() 向客户端发送数据（需显式指定对方地址）→ close() 释放资源。客户端：socket() → 设置服务器地址端口 → sendto() 发数据 → recvfrom() 收数据 → close()。与 TCP 区别：UDP 无连接，服务端不需要 listen/accept、客户端不需要 connect；收发必须用 recvfrom/sendto 并携带对方地址；每次收发对应一个完整数据报。"},
+{id:153,ch:12,q:"Socket 核心函数速查？",a:"socket() 创建套接字返回 fd（两端）；bind() 绑定本地 IP+端口（服务端）；listen() 开启监听设置最大连接数（维护半/全连接队列，服务端）；accept() 从已完成连接队列取出一个连接返回已连接 fd（阻塞，服务端）；connect() 主动连接服务器（三次握手，客户端）；send()/recv() 收发数据（TCP，带 flags 参数）；read()/write() 通用文件 IO 方式收发；recvfrom()/sendto() 收发数据报并携带对方地址（UDP）；close() 关闭 fd（引用计数减 1）；shutdown() 按方向半关闭连接；setsockopt() 设置套接字选项（SO_REUSEADDR 等）。"},
+{id:154,ch:12,q:"阻塞/非阻塞 socket？send/recv 返回值？",a:"默认 socket 是阻塞模式：recv 无数据时一直阻塞、accept 无连接时一直等待；用 fcntl 设置 O_NONBLOCK 后变为非阻塞：IO 立即返回，无数据时 recv 返回 -1 且 errno 为 EAGAIN/EWOULDBLOCK。非阻塞 fd 必须配合 IO 多路复用使用，否则只能忙轮询浪费 CPU。send/recv 返回值速记：大于 0 表示实际收发字节数；等于 0 表示对端已关闭（TCP）；等于 -1 表示出错，或非阻塞下暂时不可用（看 errno）。"},
+{id:155,ch:12,q:"shutdown 与 close 的区别？",a:"close(fd)：引用计数减 1，只有计数归 0 才真正关闭连接、触发四次挥手，fork/dup 出的其他 fd 副本不受影响；shutdown(fd, how)：立即按方向切断连接，不关闭 fd——SHUT_WR 表示不再发送（发 FIN 仍可接收）、SHUT_RD 不再接收、SHUT_RDWR 双向。为什么需要半关闭：客户端发完数据想告诉服务端「我不会再发了」（发 FIN）但仍要接收服务端的响应，用 SHUT_WR 即可，而 close 会把读方向也一起关掉。扩展：服务端重启常遇 bind 报 Address already in use（TIME_WAIT 占端口），在 bind 前用 setsockopt 设置 SO_REUSEADDR 解决，几乎所有 TCP 服务器都要加；SO_REUSEPORT 允许多进程绑同一端口负载均衡；TCP_NODELAY 关闭 Nagle 算法降低小包延迟。"},
+{id:156,ch:12,q:"什么是粘包/半包？产生原因？",a:"TCP 是面向字节流的协议，本身不识别「消息边界」。粘包：发送方连续 send 了 A、B 两个消息，接收方一次 read 读到了 AB（多个消息粘连，无法区分边界）；半包（拆包）：一个消息太大被 TCP 拆分，接收方一次 read 只读到一部分，需多次读才能凑齐。产生原因：粘包①Nagle 算法把小数据块合并成一个报文段发送；②接收方读取不及时，多个消息在接收缓冲区积压被一次 read 读走；半包①消息超过 MSS/MTU，TCP 传输前必须拆分；②数据超过接收缓冲区剩余空间需分多次接收。本质：应用层没有定义「消息边界」。粘包/半包不是 TCP 的 Bug，而是字节流没有消息边界的必然结果。为什么 UDP 不粘包：UDP 面向报文，每次 sendto 对应一个独立数据报，边界由协议保证。"},
+{id:157,ch:12,q:"粘包/半包解决方案？",a:"①固定长度：每个消息定长（不足补 0 或空格），接收方按固定长度截取，实现最简单但浪费带宽、消息变长时无法处理；②特殊分隔符：每个消息末尾加分隔符（如 \\r\\n），接收方按分隔符切分（FTP、文本协议常用），实现简单但消息内容不能包含该字符需转义；③长度字段（最推荐、主流方案）：消息头用固定长度字段声明消息体长度（Header-Body 模式），接收方先读头部得到长度，再按长度循环读取直到收满一个完整消息，天然解决半包（不够就缓存等下次），Netty 的 LengthFieldBasedFrameDecoder 就是这类实现。半包处理口诀：读头部 → 算长度 → 循环读到够 → 处理消息；读不满的部分缓存等下次。注：关闭 Nagle 能减少粘包但不能根治，正确做法永远是应用层协议定边界。"},
+{id:158,ch:12,q:"什么是 IO 多路复用？",a:"IO 多路复用是指用一个线程同时监听多个文件描述符（fd/socket）的可读、可写、异常事件，有事件时再通知程序处理。传统模型一个连接一个线程，连接数上来后线程数量爆炸、上下文切换开销大；多路复用把所有连接的 IO 事件集中到一个线程，是高并发服务器的基石（Nginx、Redis、Netty 都依赖它）。"},
+{id:159,ch:12,q:"select 的原理和缺点？",a:"select 阻塞等待多个 fd 集合上的事件（可监听可读、可写、异常三类事件），返回后需用 FD_ISSET 逐个检查哪些 fd 就绪。操作宏：FD_ZERO 清空、FD_SET 加入、FD_CLR 移除、FD_ISSET 检查。int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)，timeout 为 NULL 时一直阻塞直到有事件。缺点：①fd 上限 1024（FD_SETSIZE，需改宏重新编译）；②每次调用都要把整个集合从用户态拷贝到内核态；③内核 O(n) 遍历所有 fd，返回后用户还要 O(n) 轮询找就绪 fd；④select 会修改 fd 集合，下次调用必须重新设置。"},
+{id:160,ch:12,q:"poll 和 epoll？",a:"poll 用 pollfd 数组替代 fd_set，突破了 1024 上限（受 fd 配额限制），且不修改传入数组；但仍需每次拷贝整个数组、内核 O(n) 遍历、用户 O(n) 查找，fd 多时效率依然低。epoll 是 Linux 特有的高效 IO 多路复用机制，三个系统调用：epoll_create() 创建 epoll 实例；epoll_ctl() 增删改需要监听的 fd（fd 只在此处注册/拷贝一次）；epoll_wait() 等待事件，只返回就绪的 fd。优点：①无数量上限；②红黑树管理监听 fd（增删 O(log n)）+ 就绪链表，epoll_wait 只返回就绪事件获取效率 O(1)；③内核与用户空间内存交互少（不用每次拷贝整个集合）；④支持 LT/ET 两种触发模式。"},
+{id:161,ch:12,q:"select/poll/epoll 对比表？",a:"数据结构：select 位图 fd_set / poll pollfd 数组 / epoll 红黑树+就绪链表；fd 上限：select 默认 1024 / poll 无（受 fd 配额）/ epoll 无（受 fd 配额）；查找就绪 fd：select O(n) 遍历 / poll O(n) 遍历 / epoll O(1) 就绪链表；用户态拷贝：select 每次调用拷贝整个集合 / poll 每次拷贝整个数组 / epoll 只在 epoll_ctl 注册时拷贝一次；触发模式：select 仅水平触发 / poll 仅水平触发 / epoll 水平+边缘触发；平台：select 跨平台 / poll 跨平台 / epoll Linux 特有。面试必背：epoll 三接口 epoll_create/epoll_ctl/epoll_wait。"},
+{id:162,ch:12,q:"LT 与 ET 的区别（epoll 高频追问）？",a:"LT 水平触发（默认）：只要 fd 还有未读完的数据，epoll_wait 就持续通知直到处理完，编程简单不易丢事件，适合大部分场景；ET 边缘触发：只在状态变化（如缓冲区从空到有数据）时通知一次，如果一次没读完且之后没有新数据到达就再也不会通知，因此必须配合非阻塞 fd，循环 read 直到返回 EAGAIN 为止。ET 系统调用次数少、效率更高，适合大并发高流量，但编程要求高（Nginx 用 ET）。一句话：LT 是「有货就通知」，ET 是「来货时通知一次，没取完不补通知」。"},
+{id:163,ch:12,q:"IO 模型横向对比？",a:"阻塞 IO：一个连接占一个线程，简单直观，连接多时线程爆炸，适合低并发；非阻塞 IO：立即返回需自行轮询，浪费 CPU，配合多路复用使用；IO 多路复用：一个线程监听多个 fd、事件驱动，高并发主流（select/poll/epoll）；信号驱动 IO：发起 IO 后继续做其他事，数据就绪时内核通过信号（SIGIO）通知，在信号处理函数中处理，Unix 类系统支持、实际应用较少；异步 IO：内核完成 IO 后通知用户，全程不阻塞用户态（AIO/io_uring），极致性能场景。扩展：epoll 惊群——多进程/线程同时 epoll_wait 同一 fd，事件到达全部唤醒但只有一个能处理，解决用 EPOLLEXCLUSIVE 标志、专用 acceptor 线程或 SO_REUSEPORT。"},
+{id:164,ch:12,q:"多进程 vs 多线程并发服务器？",a:"多进程：地址空间隔离，共享数据需 IPC（管道、信号、共享内存、socket），进程创建与切换开销大，单个进程崩溃不影响其他（健壮性高），适合稳定性、隔离性要求高的场景；多线程：同进程共享地址空间、直接共享数据，线程切换开销小性能通常更好，但需注意线程安全问题（竞态、死锁），适合性能优先、配合锁与线程池。选型：稳定性隔离性优先 → 多进程；性能优先 → 多线程 + 锁 + 线程池。"},
+{id:165,ch:12,q:"什么是线程池？",a:"线程池是预先创建一组工作线程放入队列等待任务的技术：新任务到来时唤醒一个工作线程处理，处理完回池等待下一个任务。通过线程复用避免频繁创建/销毁的开销，提高并发处理能力与可伸缩性。组成：任务队列 + 线程池管理器 + 工作线程。"},
+{id:166,ch:12,q:"常见高并发架构（Reactor 模式）？",a:"面试常考的高并发组合：IO 多路复用（epoll）监听事件 + 线程池/工作进程执行业务，即 Reactor 模式——一个事件循环线程负责 accept 新连接并分发事件，线程池处理具体读写和业务逻辑。Nginx（多进程 + 事件循环）、Redis（单线程事件循环）、Netty（多线程 Reactor）都是这类架构。回答时讲清「谁负责监听、谁负责处理、如何避免阻塞事件循环」即可。"},
+{id:167,ch:12,q:"如何接收并解析大数据包（1K 以上）？",a:"核心思路：用环形缓冲区暂存数据，按「帧头 → 帧长 → 收满一帧 → 校验 → 解析」流程处理。①初始化环形缓冲区：按数据包最大长度设置（如 1K 或更大），维护头/尾指针循环写入，避免普通缓冲区反复搬运或溢出；②分段接收：每次收到数据（串口中断或网络 recv）存入缓冲区并更新指针，逐字节检测帧头，检测到后解析帧长字段确定完整长度，持续检查是否收满完整帧——没收满则缓存等待后续数据（即半包处理）；③帧校验：收满完整帧后先校验再解析，常用 CRC-16/CRC-32/校验和，比对一致说明完整、不一致丢弃该帧；④数据解析：校验通过后按帧协议提取有效数据（命令、参数、数据段按索引偏移解析）；⑤错误处理：接收超时/校验失败/缓冲区溢出时丢弃当前帧并重置缓冲区。与 TCP 粘包/半包的「长度字段方案」是同一套东西：帧头+帧长就是消息头 Header，帧体就是消息体 Body，校验码是应用层加的完整性保障。"}
+];
+
+/* =========================================================
+   工具函数
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const LS_KEY = 'eba_v1';
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function parseDate(s){ const p = s.split('-').map(Number); return new Date(p[0], p[1]-1, p[2]); }
+function fmtDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function addDays(s, n){ const d = parseDate(s); d.setDate(d.getDate()+n); return fmtDate(d); }
+function dayDiff(a, b){ return Math.round((parseDate(b)-parseDate(a))/86400000); }
+function wd(s){ const d = parseDate(s); return '周'+'日一二三四五六'[d.getDay()]; }
+function defaultState(){ return { v:1, start:todayStr(), config:{dailyNew:34, intervals:[1,2,4,7,15]}, cards:{}, log:{} }; }
+let state;
+function loadState(){
+  try{ const raw = localStorage.getItem(LS_KEY); if(raw){ const s = JSON.parse(raw); if(s && s.v===1) return s; } }catch(e){}
+  return defaultState();
+}
+function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+function rec(id){ if(!state.cards[id]) state.cards[id] = {learned:null, ivs:[], done:[], extra:[], passes:0, mastered:false, masteredDate:null}; return state.cards[id]; }
+function logRec(){ const t = todayStr(); if(!state.log[t]) state.log[t] = {learn:0, review:0, good:0, fuzzy:0, forgot:0}; return state.log[t]; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(msg){ const el = $('#toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(()=>el.classList.remove('show'), 2200); }
+
+/* =========================================================
+   记忆排期：艾宾浩斯 + 5天一轮
+   ========================================================= */
+function dayIndex(){ return dayDiff(state.start, todayStr()) + 1; }
+function roundInfo(){
+  const d = Math.max(1, dayIndex());
+  return { round:Math.ceil(d/5), dayInRound:((d-1)%5)+1, dayIndex:d };
+}
+function unlearnedIds(){ return CARDS.filter(c => !rec(c.id).learned).map(c => c.id); }
+function todayNewIds(){ return unlearnedIds().slice(0, state.config.dailyNew); }
+function dueIntervals(cid){
+  const r = rec(cid); if(!r.learned) return [];
+  const t = todayStr(), out = [];
+  r.ivs.forEach((iv,i)=>{ if(addDays(r.learned, iv) === t && !r.done.includes(i)) out.push(i); });
+  return out;
+}
+function isDue(cid){
+  const r = rec(cid);
+  if(!r.learned) return false;
+  if(dueIntervals(cid).length) return true;
+  return (r.extra||[]).includes(todayStr());
+}
+function dueIds(){ return CARDS.filter(c => isDue(c.id)).map(c => c.id); }
+function cardById(id){ return CARDS.find(c => c.id === id); }
+function masteredCount(){ return CARDS.filter(c => rec(c.id).mastered).length; }
+function learnedCount(){ return CARDS.filter(c => rec(c.id).learned).length; }
+function streak(){
+  let n = 0; let d = todayStr();
+  while(state.log[d] && (state.log[d].learn + state.log[d].review) > 0){ n++; d = addDays(d, -1); }
+  return n;
+}
+function totalReviews(){ let n = 0; for(const k in state.log) n += state.log[k].review; return n; }
+
+/* =========================================================
+   记忆曲线 SVG（签名元素：艾宾浩斯遗忘曲线 + 复习回升）
+   ========================================================= */
+function curveSVG(){
+  const W = 340, H = 150, L = 24, R = 318, T = 26, B = 128;
+  const x = t => L + (R-L) * (t/7);
+  const y = r => B - (B-T) * (r/100);
+  let noRev = 'M'+x(0).toFixed(1)+' '+y(100).toFixed(1);
+  let withRev = 'M'+x(0).toFixed(1)+' '+y(100).toFixed(1);
+  const iv = state.config.intervals.filter(v => v<=7);
+  const pts = [[0,100]];
+  // 不复习曲线：100 * exp(-t/1.5)
+  for(let t=0.05; t<=7.001; t+=0.15){
+    const r = 100*Math.exp(-t/1.5);
+    noRev += ' L'+x(t).toFixed(1)+' '+y(r).toFixed(1);
+  }
+  // 复习曲线：在每个复习日跳回 90 再衰减
+  let t0 = 0, r0 = 100, ri = 0;
+  const reviewDays = iv;
+  const nextReview = i => i < reviewDays.length ? reviewDays[i] : Infinity;
+  for(let t=0.05; t<=7.001; t+=0.15){
+    if(t >= nextReview(ri)){
+      r0 = 90; t0 = t; ri++;
+    }
+    const r = r0*Math.exp(-(t-t0)/1.5);
+    withRev += ' L'+x(t).toFixed(1)+' '+y(r).toFixed(1);
+  }
+  let dots = '';
+  reviewDays.forEach(d => {
+    dots += '<circle cx="'+x(d).toFixed(1)+'" cy="'+y(90*Math.exp(-0.2/1.5)).toFixed(1)+'" r="3.4" fill="#2E7D5B"/>';
+  });
+  let grid = '';
+  [25,50,75].forEach(r => {
+    const gy = y(r);
+    grid += '<line x1="'+L+'" y1="'+gy+'" x2="'+R+'" y2="'+gy+'" stroke="#E6E0CE" stroke-width="1"/>';
+  });
+  let labels = '';
+  [0,1,2,4,7].forEach(d => { labels += '<text x="'+x(d)+'" y="'+ (H-8) +'" font-size="10" fill="#8A938C" text-anchor="middle">'+d+'天</text>'; });
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">'
+    + grid
+    + '<path d="'+noRev+'" fill="none" stroke="#B9B2A0" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round"/>'
+    + '<path d="'+withRev+'" fill="none" stroke="#2E7D5B" stroke-width="2.6" stroke-linecap="round"/>'
+    + dots
+    + labels
+    + '<text x="14" y="26" font-size="10" fill="#8A938C">100%</text>'
+    + '<text x="14" y="128" font-size="10" fill="#8A938C">0</text>'
+    + '<text x="250" y="20" font-size="10" fill="#5C6B66">—— 不复习的遗忘曲线</text>'
+    + '<text x="250" y="34" font-size="10" fill="#2E7D5B">—— 按计划复习的保持率</text>'
+    + '</svg>';
+}
+
+/* =========================================================
+   视图渲染
+   ========================================================= */
+const routeViews = ['today','study','review','browse','plan','stats','settings'];
+let current = 'today';
+
+function route(){
+  let r = location.hash.replace(/^#\//,'').split('?')[0];
+  if(!routeViews.includes(r)) r = 'today';
+  current = r;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  $('#view-'+r).classList.add('active');
+  document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('active', a.dataset.route === r));
+  const titleMap = {today:'今日任务',study:'学习新卡',review:'复习',browse:'题库浏览',plan:'轮次计划',stats:'学习统计',settings:'设置'};
+  $('.top-title').textContent = titleMap[r];
+  window.scrollTo(0,0);
+  renderView(r);
+}
+function renderView(r){
+  const fns = {today:renderToday, study:()=>renderSession('study'), review:()=>renderSession('review'),
+    browse:renderBrowse, plan:renderPlan, stats:renderStats, settings:renderSettings};
+  (fns[r]||renderToday)();
+}
+function renderTop(){
+  $('#top-date').textContent = todayStr() + ' · ' + wd(todayStr());
+  const ri = roundInfo();
+  $('#top-right').innerHTML =
+    '<span class="chip">第 '+ri.round+' 轮 · 第 '+ri.dayInRound+' 天</span>'
+    + '<span class="chip green">连续 '+streak()+' 天</span>';
+}
+
+/* ---------- 今日 ---------- */
+function renderToday(){
+  const v = $('#view-today');
+  const ri = roundInfo();
+  const nNew = todayNewIds().length;
+  const due = dueIds();
+  const learned = learnedCount();
+  const doneToday = state.log[todayStr()];
+  const remainingNew = Math.max(0, nNew - (doneToday ? doneToday.learn : 0));
+  const doneReview = doneToday ? doneToday.review : 0;
+  const remainingReview = Math.max(0, due.length - doneReview);
+  const allDone = learned >= CARDS.length;
+  v.innerHTML = ''
+  + '<div class="section-head"><h2>今日记忆任务</h2><p>每天 '+state.config.dailyNew+' 张新卡，5 天学完全部 167 道；复习按艾宾浩斯间隔 '+state.config.intervals.join('/')+' 天自动排期。</p></div>'
+  + '<div class="curve-wrap"><h3>艾宾浩斯记忆曲线</h3><div class="cap">不复习的遗忘曲线（灰虚线）与按时复习后的保持率（绿实线，绿色圆点为复习节点）</div>' + curveSVG() + '</div>'
+  + '<div class="today-tasks">'
+  + '<div class="task-card"><div class="t-head">'
+  + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#33658A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>'
+  + '<h3>学习新卡</h3><span class="chip blue" style="background:var(--blue-soft);color:var(--blue)">本轮第 '+ri.dayInRound+' 天</span></div>'
+  + '<div class="big">'+(allDone ? '全部学完' : remainingNew + (doneToday && doneToday.learn ? '（已完成 '+doneToday.learn+'）' : ''))+'</div>'
+  + '<p>'+(allDone ? '题库已全部学完，坚持复习即可。' : '今天再学 ' + remainingNew + ' 道，掌握后自动进入复习计划。')+'</p>'
+  + '<div class="round-dots">' + [1,2,3,4,5].map(d => '<span class="dot'+(d<=ri.dayInRound?' on':'')+'"></span>').join('') + '<span style="font-size:12px;color:var(--ink-soft)">5 天为一轮</span></div>'
+  + '<a class="btn '+(allDone||remainingNew===0 ? 'btn-line' : 'btn-blue')+'" href="#/study" style="align-self:flex-start">'+(remainingNew>0 ? '开始学习' : '去复习')+'</a>'
+  + '</div>'
+  + '<div class="task-card"><div class="t-head">'
+  + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#BF3B24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>'
+  + '<h3>到期复习</h3><span class="chip red">'+(remainingReview>0?'待复习':'')+'</span></div>'
+  + '<div class="big">'+(due.length===0?'无':remainingReview+' 张')+'</div>'
+  + '<p>'+(due.length===0 ? '今天没有到期的复习卡，可以提前学新卡或浏览题库。' : '按遗忘曲线安排，共 '+due.length+' 张到期（已完成 '+doneReview+' 张）。')+'</p>'
+  + '<a class="btn '+(remainingReview>0 ? 'btn-main' : 'btn-line')+'" href="#/review" style="align-self:flex-start">'+(remainingReview>0 ? '开始复习' : '暂无需复习')+'</a>'
+  + '</div></div>'
+  + '<div class="panel" style="margin-top:18px"><h3 style="margin-bottom:10px">今日安排说明</h3>'
+  + '<ul style="font-size:13.5px;color:var(--ink-soft);line-height:2;padding-left:18px">'
+  + '<li>新卡学习：每天固定 <b style="color:var(--ink)">'+state.config.dailyNew+' 张</b>（可在设置中调整），按章节顺序依次推进。</li>'
+  + '<li>复习节奏：新卡学习当天起，第 <b style="color:var(--ink)">'+state.config.intervals.join(' / ')+' 天</b> 到期复习；答「模糊/忘了」会自动在明天追加一次复习。</li>'
+  + '<li>轮次划分：每 5 天为一轮，「第 X 轮 · 第 Y 天」在右上角实时显示，进度一目了然。</li>'
+  + '</ul></div>';
+}
+
+/* ---------- 学习 / 复习 会话 ---------- */
+let session = null;
+function startSession(mode){
+  const ids = mode === 'study' ? todayNewIds() : dueIds();
+  session = { mode, queue: ids.slice(), idx: 0, open: false, done:0, good:0, fuzzy:0, forgot:0, requeued:{} };
+}
+function renderSession(mode){
+  const v = $('#view-'+mode);
+  if(!session || session.mode !== mode || session.queue.length === 0){
+    // 无任务或会话结束
+    if(!session || session.mode !== mode){
+      startSession(mode);
+      if(session.queue.length === 0){
+        v.innerHTML = '<div class="empty-hint"><div style="font-size:15px;font-weight:700;margin-bottom:8px">'
+          + (mode==='study' ? '今日新卡已全部学完' : '今天没有到期的复习')
+          + '</div><p style="font-size:13px;color:var(--ink-soft)">'
+          + (mode==='study' ? '去复习已学内容，或浏览题库预习后面的题目。' : '可以提前学习新卡，明天再来巩固。')
+          + '</p><div style="margin-top:18px"><a class="btn btn-line" href="#/today">回到今日任务</a></div></div>';
+        return;
+      }
+    } else {
+      v.innerHTML = renderSessionSummary(session);
+      return;
+    }
+  }
+  const c = cardById(session.queue[session.idx]);
+  const r = rec(c.id);
+  const total = session.queue.length;
+  const tag = mode === 'study' ? '新卡学习' : '到期复习';
+  v.innerHTML = '<div class="flash-wrap">'
+  + '<div class="flash-progress"><span>'+tag+' · 第 '+(session.idx+1)+' / '+total+' 张</span>'
+  + '<div class="progress-bar"><i style="width:'+((session.idx)/total*100).toFixed(1)+'%"></i></div>'
+  + (r.mastered ? '<span class="tag mastered">已毕业</span>' : '')
+  + '</div>'
+  + '<div class="flash-card'+(session.open?' open':'')+(mode==='review'?' review':'')+'" id="flash-card">'
+  + '<div class="fc-chap"><span class="band" style="background:'+CH_COLOR[c.ch-1]+'"></span>'+CH[c.ch]+'</div>'
+  + '<div class="q">'+esc(c.q)+'</div>'
+  + '<div class="a-wrap"><div class="a">'+c.a+'</div></div>'
+  + '</div>'
+  + '<div class="flash-actions" id="flash-actions">'
+  + (session.open
+      ? '<button class="rate-btn good" onclick="rateCurrent(\'good\')">记住了</button>'
+        + '<button class="rate-btn fuzzy" onclick="rateCurrent(\'fuzzy\')">模糊</button>'
+        + '<button class="rate-btn forgot" onclick="rateCurrent(\'forgot\')">忘了</button>'
+      : '<button class="btn btn-main" style="flex:1" onclick="flipCard()">显示答案</button>')
+  + '</div>'
+  + '<div class="flip-hint">'+(session.open ? '按掌握程度自评：记住/模糊/忘了' : '先自己回忆，再点「显示答案」对照')+'</div>'
+  + '</div>';
+}
+function flipCard(){ session.open = true; renderSession(session.mode); }
+function rateCurrent(result){
+  const cid = session.queue[session.idx];
+  const r = rec(cid);
+  const isNew = !r.learned;
+  const t = todayStr();
+  // 记录学习
+  if(isNew){
+    r.learned = t; r.ivs = state.config.intervals.slice(); r.done = []; r.extra = []; r.passes = 0; r.mastered = false;
+  }
+  const log = logRec();
+  if(isNew){ log.learn++; session.done++; } else { log.review++; session.done++; }
+  if(result === 'good'){
+    if(!isNew){ dueIntervals(cid).forEach(i => { if(!r.done.includes(i)) r.done.push(i); }); }
+    r.extra = (r.extra||[]).filter(d => d !== t);
+    if(!isNew && r.ivs.length && r.done.length >= r.ivs.length){ r.mastered = true; r.masteredDate = t; }
+    log.good++; session.good++;
+    session.queue.splice(session.idx, 1);
+  } else if(result === 'fuzzy'){
+    if(!isNew){ dueIntervals(cid).forEach(i => { if(!r.done.includes(i)) r.done.push(i); }); }
+    r.extra = (r.extra||[]).filter(d => d !== t); r.extra.push(addDays(t, 1));
+    log.fuzzy++; session.fuzzy++;
+    session.queue.splice(session.idx, 1);
+  } else {
+    r.passes = (r.passes||0) + 1;
+    r.extra = (r.extra||[]).filter(d => d !== t); r.extra.push(addDays(t, 1));
+    log.forgot++; session.forgot++;
+    if(r.passes <= 1 && !session.requeued[cid]){
+      // 首次忘了：移到队尾再练一次
+      session.requeued[cid] = true;
+      const c = session.queue.splice(session.idx, 1)[0];
+      session.queue.push(c);
+    } else {
+      session.queue.splice(session.idx, 1);
+    }
+  }
+  if(session.idx >= session.queue.length) session.idx = 0;
+  session.open = false;
+  saveState(); renderTop();
+  if(session.queue.length === 0){ renderSessionSummary(session); } else { renderSession(session.mode); }
+}
+function renderSessionSummary(s){
+  const v = $('#view-'+s.mode);
+  v.innerHTML = '<div class="session-summary">'
+  + '<div class="ring">'+s.done+'</div>'
+  + '<h2 style="font-family:var(--display-font);font-size:22px;margin-bottom:6px">'+(s.mode==='study' ? '今日新卡学习完成' : '今日复习完成')+'</h2>'
+  + '<p style="color:var(--ink-soft);font-size:14px;margin-bottom:18px">共 '+s.done+' 张 · 记住 '+s.good+' 张 · 模糊 '+s.fuzzy+' 张 · 忘了 '+s.forgot+' 张</p>'
+  + '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
+  + '<a class="btn btn-line" href="#/today">回到今日</a>'
+  + (s.mode==='study' && dueIds().length ? '<a class="btn btn-main" href="#/review">去复习到期内容</a>' : '')
+  + '<a class="btn btn-line" href="#/browse">浏览题库</a>'
+  + '</div></div>';
+}
+
+/* ---------- 浏览 ---------- */
+let browseState = { ch:0, kw:'' };
+function renderBrowse(){
+  const v = $('#view-browse');
+  const kw = browseState.kw.trim().toLowerCase();
+  let list = CARDS;
+  if(browseState.ch) list = list.filter(c => c.ch === browseState.ch);
+  if(kw) list = list.filter(c => c.q.toLowerCase().includes(kw) || c.a.toLowerCase().includes(kw));
+  v.innerHTML = '<div class="section-head"><h2>题库浏览</h2><p>共 '+CARDS.length+' 道题，可按章节筛选、关键词搜索，点题目展开答案。</p></div>'
+  + '<div class="chip-row">'
+  + '<button class="chip-btn'+(browseState.ch===0?' on':'')+'" onclick="setBrowseCh(0)">全部 ('+CARDS.length+')</button>'
+  + Object.keys(CH).map(k => {
+      const n = CARDS.filter(c => c.ch === +k).length;
+      return '<button class="chip-btn'+(browseState.ch===+k?' on':'')+'" onclick="setBrowseCh('+k+')" style="'+(browseState.ch===+k?'':'')+'">'+CH[k]+' ('+n+')</button>';
+    }).join('')
+  + '</div>'
+  + '<div class="search-box"><input id="browse-kw" placeholder="搜索题目关键词…" value="'+esc(browseState.kw)+'" oninput="browseState.kw=this.value;renderBrowse()"></div>'
+  + (list.length === 0 ? '<div class="empty-hint">没有匹配的题目</div>'
+    : list.map(c => {
+        const r = rec(c.id);
+        const badge = r.mastered ? '<span class="tag mastered">已毕业</span>' : (r.learned ? '<span class="tag learned">学习中</span>' : '');
+        const due = r.learned && isDue(c.id) ? '<span class="tag due">今日到期</span>' : '';
+        return '<div class="browse-item" style="border-left-color:'+CH_COLOR[c.ch-1]+'">'
+          + '<div class="bi-q" onclick="this.parentNode.classList.toggle(\'open\')">'+esc(c.q)+'</div>'
+          + '<div class="bi-a">'+c.a+'</div>'
+          + '<div class="bi-meta"><span style="color:'+CH_COLOR[c.ch-1]+';font-weight:700">'+CH[c.ch]+'</span>'+badge+due
+          + (r.learned ? '<span>学习于 '+r.learned+(r.masteredDate ? ' · 毕业 '+r.masteredDate : '')+'</span>' : '')
+          + '</div></div>';
+      }).join(''));
+}
+function setBrowseCh(ch){ browseState.ch = ch; renderBrowse(); }
+
+/* ---------- 轮次计划 ---------- */
+function renderPlan(){
+  const v = $('#view-plan');
+  const ri = roundInfo();
+  const totalDays = Math.ceil(CARDS.length / state.config.dailyNew);
+  const rows = [];
+  const today = todayStr();
+  const unlearned = unlearnedIds().length;
+  for(let d = 1; d <= Math.min(totalDays, 60); d++){
+    const date = addDays(state.start, d-1);
+    const r = Math.ceil(d/5), day = ((d-1)%5)+1;
+    if(dayDiff(today, date) < -20 && day > 1) continue; // 只展示从当前轮开始的近期
+    const reviews = [];
+    CARDS.forEach(c => {
+      const cr = rec(c.id);
+      if(cr.learned){
+        cr.ivs.forEach((iv,i)=>{
+          if(addDays(cr.learned, iv) === date) reviews.push({iv});
+        });
+      }
+    });
+    const remain = Math.max(0, CARDS.length - (d-1)*state.config.dailyNew);
+    const newN = d <= totalDays ? Math.min(state.config.dailyNew, remain) : 0;
+    const isToday = date === today;
+    rows.push({d, date, r, day, newN, reviews, isToday});
+  }
+  // 按轮次分组
+  const rounds = {};
+  rows.forEach(row => { if(!rounds[row.r]) rounds[row.r] = []; rounds[row.r].push(row); });
+  let html = '<div class="section-head"><h2>轮次计划</h2><p>每 5 天为一轮：每天学 '+state.config.dailyNew+' 张新卡，并复习当天到期的内容（学习后第 '+state.config.intervals.join('/')+' 天各复习一次）。</p></div>';
+  const rk = Object.keys(rounds).map(Number).sort((a,b)=>a-b);
+  html += rk.map(r => {
+    const rs = rounds[r];
+    const isCur = r === ri.round;
+    let table = '<table class="plan-table"><thead><tr><th>日期</th><th>第几天</th><th>新卡</th><th>到期复习</th></tr></thead><tbody>';
+    rs.forEach(row => {
+      const rv = row.reviews.length
+        ? row.reviews.map(x => '<span class="rhythm" style="display:inline-flex"><span>第'+x.iv+'天复习</span></span>').join(' ')
+        : '<span style="color:var(--ink-soft)">—</span>';
+      table += '<tr class="'+(row.isToday?'today-row':'')+'"><td class="day-num">'+row.date+'</td><td>第 '+row.day+' 天</td>'
+        + '<td>'+(row.newN ? row.newN+' 张' : '—')+'</td><td>'+rv+'</td></tr>';
+    });
+    table += '</tbody></table>';
+    return '<div class="plan-round"><div class="pr-head">第 '+r+' 轮 · 第 '+(r*5-4)+'–'+(r*5)+' 天'
+      + (isCur ? '<span class="current">当前进行中</span>' : '')
+      + '</div>'+table+'</div>';
+  }).join('');
+  v.innerHTML = html;
+}
+
+/* ---------- 统计 ---------- */
+function renderStats(){
+  const v = $('#view-stats');
+  const learned = learnedCount(), mastered = masteredCount();
+  const due = dueIds().length;
+  const revTotal = totalReviews();
+  const st = streak();
+  // 最近7天活动
+  const days = [];
+  for(let i=6; i>=0; i--){
+    const d = addDays(todayStr(), -i);
+    const l = state.log[d] || {learn:0, review:0};
+    days.push({d, learn:l.learn, review:l.review, total:l.learn+l.review});
+  }
+  const maxV = Math.max(1, ...days.map(x => x.total));
+  const bars = days.map(x => {
+    const h = Math.max(4, Math.round(x.total/maxV*100));
+    return '<div class="bar"><div class="v">'+(x.total||'')+'</div><div class="b" style="height:'+h+'%"></div><div class="d">'+(x.d.slice(5).replace('-','/'))+'</div></div>';
+  }).join('');
+  // 章节进度
+  const chap = Object.keys(CH).map(k => {
+    const cs = CARDS.filter(c => c.ch === +k);
+    const done = cs.filter(c => rec(c.id).learned).length;
+    const pct = Math.round(done/cs.length*100);
+    return '<div class="cp-row"><div class="cp-name">'+CH[k]+'</div><div class="cp-bar"><i style="width:'+pct+'%;background:'+CH_COLOR[+k-1]+'"></i></div><div class="cp-num">'+done+' / '+cs.length+'</div></div>';
+  }).join('');
+  v.innerHTML = '<div class="section-head"><h2>学习统计</h2><p>坚持就是胜利，连续学习 '+st+' 天。</p></div>'
+  + '<div class="grid-3">'
+  + '<div class="stat"><div class="num">'+learned+'</div><div class="lbl">已学题目（共 '+CARDS.length+' 道）</div></div>'
+  + '<div class="stat"><div class="num">'+mastered+'</div><div class="lbl">已毕业（完成全部复习节点）</div></div>'
+  + '<div class="stat"><div class="num">'+revTotal+'</div><div class="lbl">累计复习次数</div></div>'
+  + '</div>'
+  + '<div class="panel" style="margin-top:18px"><h3 style="margin-bottom:14px">最近 7 天学习量</h3><div class="bars">'+bars+'</div></div>'
+  + '<div class="panel" style="margin-top:18px"><h3 style="margin-bottom:16px">各章节学习进度</h3><div class="chap-prog">'+chap+'</div></div>';
+}
+
+/* ---------- 设置 ---------- */
+function renderSettings(){
+  const v = $('#view-settings');
+  v.innerHTML = '<div class="section-head"><h2>设置</h2><p>调整每天学习量与复习间隔，保存后对新卡生效。</p></div>'
+  + '<div class="panel">'
+  + '<div class="set-row"><div class="s-label"><b>每天新卡数</b><p>5 天学完 167 道 = 每天 34 张（第 5 天收尾 31 张），可自行调整。</p></div>'
+  + '<input type="number" id="set-new" min="1" max="167" value="'+state.config.dailyNew+'"></div>'
+  + '<div class="set-row"><div class="s-label"><b>复习间隔（天）</b><p>学习后第几天复习，艾宾浩斯推荐 1/2/4/7/15。</p></div>'
+  + '<input type="text" id="set-iv" value="'+state.config.intervals.join(',')+'"></div>'
+  + '<div class="set-row"><div class="s-label"><b>轮次周期</b><p>以 5 天为一轮推进学习计划（当前已固定为 5）。</p></div>'
+  + '<span class="chip" style="background:var(--green)">5 天 / 轮</span></div>'
+  + '<div class="set-row"><div class="s-label"><b>保存设置</b><p>保存后，每天新卡数立即生效；复习间隔只影响之后新学的卡。</p></div>'
+  + '<button class="btn btn-main" onclick="saveSettings()">保存设置</button></div>'
+  + '<div class="set-row"><div class="s-label"><b>重置学习记录</b><p>清空全部学习与复习进度，从头开始（不可恢复）。</p></div>'
+  + '<button class="btn btn-red" onclick="resetAll()">重置进度</button></div>'
+  + '</div>'
+  + '<div class="panel" style="margin-top:18px"><h3 style="margin-bottom:8px">进度备份 · 多端同步</h3>'
+  + '<p style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:14px">进度存在本机浏览器里。跨设备继续：这台设备「导出」→ 把文本发到另一台设备（微信/备忘录都行）→ 那边「导入」粘贴即可。部署到 GitHub Pages 后手机 Safari 也能访问同一页面。</p>'
+  + '<div class="set-row"><div class="s-label"><b>导出进度</b><p>生成包含全部学习记录的文本。</p></div>'
+  + '<button class="btn btn-line" onclick="exportData()">导出进度</button></div>'
+  + '<div id="export-box" style="display:none;margin-top:8px"></div>'
+  + '<div class="set-row"><div class="s-label"><b>导入进度</b><p>粘贴或选择另一台设备导出的文本，覆盖当前进度。</p></div>'
+  + '<button class="btn btn-line" onclick="importData()">导入进度</button></div>'
+  + '<div id="import-box" style="display:none;margin-top:8px"></div>'
+  + '</div>';
+}
+function exportData(){
+  const box = $('#export-box');
+  const full = exportRaw();
+  box.style.display = 'block';
+  box.innerHTML = '<textarea id="export-ta" rows="4" readonly style="width:100%;box-sizing:border-box;font-size:12px;font-family:monospace;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);color:var(--ink)">'+full+'</textarea>'
+    + '<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">'
+    + '<button class="btn btn-main" onclick="copyExport()">复制文本</button>'
+    + '<button class="btn btn-line" onclick="downloadExport()">下载为文件</button>'
+    + '</div>';
+}
+function exportRaw(){ return 'EBA1:' + encodeURIComponent(JSON.stringify(state)); }
+function copyExport(){
+  const ta = $('#export-ta');
+  ta.select();
+  try{ navigator.clipboard.writeText(ta.value); toast('已复制，发送到另一台设备即可'); return; }catch(e){}
+  try{ document.execCommand('copy'); toast('已复制'); }catch(e){ toast('请长按文本框手动复制'); }
+}
+function downloadExport(){
+  const blob = new Blob([$('#export-ta').value], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'emba-backup-'+todayStr()+'.txt';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 300);
+}
+function importData(){
+  const box = $('#import-box');
+  box.style.display = 'block';
+  box.innerHTML = '<textarea id="import-ta" rows="4" placeholder="在此粘贴导出的进度文本" style="width:100%;box-sizing:border-box;font-size:12px;font-family:monospace;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);color:var(--ink)"></textarea>'
+    + '<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">'
+    + '<button class="btn btn-main" onclick="applyImport()">应用导入</button>'
+    + '<label class="btn btn-line" style="cursor:pointer;display:inline-flex;align-items:center">选择文件<input type="file" accept=".txt,.json,text/plain,application/json" style="display:none" onchange="readImportFile(event)"></label>'
+    + '</div>';
+}
+function applyImport(){
+  const v = $('#import-ta').value.trim();
+  if(!v){ toast('请先粘贴进度文本'); return; }
+  const s = parseBackup(v);
+  if(!s){ toast('进度文本无效，请确认完整粘贴'); return; }
+  state = s;
+  saveState(); renderTop(); route();
+  toast('导入成功');
+}
+function readImportFile(ev){
+  const f = ev.target.files && ev.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    const s = parseBackup(String(r.result).trim());
+    if(!s){ toast('文件内容无效'); return; }
+    state = s;
+    saveState(); renderTop(); route();
+    toast('导入成功');
+  };
+  r.readAsText(f, 'utf-8');
+}
+function parseBackup(text){
+  try{
+    let data = text;
+    if(data.indexOf('EBA1:') === 0) data = data.slice(5);
+    const obj = JSON.parse(decodeURIComponent(data));
+    if(obj && obj.v === 1 && obj.start && obj.config && obj.config.intervals && obj.cards && obj.log) return obj;
+  }catch(e){}
+  return null;
+}
+function saveSettings(){
+  const n = parseInt($('#set-new').value, 10);
+  const ivs = $('#set-iv').value.split(/[,，\s]+/).map(x => parseInt(x, 10)).filter(x => x > 0 && x < 100);
+  if(!n || n < 1){ toast('每天新卡数需为不小于 1 的整数'); return; }
+  if(!ivs.length){ toast('复习间隔格式有误'); return; }
+  state.config.dailyNew = n;
+  state.config.intervals = ivs;
+  saveState(); renderTop(); renderSettings();
+  toast('设置已保存');
+}
+function resetAll(){
+  if(confirm('确定清空全部学习记录吗？此操作不可恢复。')){
+    try{ localStorage.removeItem(LS_KEY); }catch(e){}
+    location.hash = '#/today';
+    location.reload();
+  }
+}
+
+/* =========================================================
+   初始化
+   ========================================================= */
+function init(){
+  state = loadState();
+  renderTop();
+  window.addEventListener('hashchange', route);
+  $('#hamburger').addEventListener('click', () => { $('#sidebar').classList.add('open'); $('#overlay').classList.add('show'); });
+  $('#overlay').addEventListener('click', () => { $('#sidebar').classList.remove('open'); $('#overlay').classList.remove('show'); });
+  route();
+}
+window.CARDS = CARDS;
+init();
+</script>
+</body>
+</html>
