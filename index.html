@@ -151,6 +151,11 @@ a{color:inherit;text-decoration:none}
 .bi-edit.open{display:block}
 .bi-edit textarea{width:100%;box-sizing:border-box;font-size:13px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);color:var(--ink);line-height:1.7;resize:vertical;font-family:inherit}
 .btn-mini{padding:5px 12px;font-size:12px;border-radius:8px}
+.del-cb{display:inline-flex;align-items:center;margin:2px 10px 4px 0;cursor:pointer}
+.del-cb input{width:16px;height:16px;accent-color:#BF3B24;cursor:pointer}
+.browse-item.del-on{background:rgba(191,59,36,.06);box-shadow:inset 3px 0 0 #BF3B24}
+.del-hint{margin:10px 0;font-size:12.5px;color:#BF3B24;background:rgba(191,59,36,.08);border:1px solid rgba(191,59,36,.25);border-radius:8px;padding:8px 12px;line-height:1.7}
+.del-bar{position:sticky;bottom:16px;margin-top:16px;display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:12px 16px;background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.08);font-size:13px;flex-wrap:wrap}
 .tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700}
 .tag.learned{background:var(--blue-soft);color:var(--blue)}
 .tag.mastered{background:var(--green-soft);color:var(--green)}
@@ -493,10 +498,10 @@ function fmtDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(
 function addDays(s, n){ const d = parseDate(s); d.setDate(d.getDate()+n); return fmtDate(d); }
 function dayDiff(a, b){ return Math.round((parseDate(b)-parseDate(a))/86400000); }
 function wd(s){ const d = parseDate(s); return '周'+'日一二三四五六'[d.getDay()]; }
-function defaultState(){ return { v:1, start:todayStr(), config:{dailyNew:34, intervals:[1,2,4,7,15]}, cards:{}, log:{}, custom:[], overrides:{} }; }
+function defaultState(){ return { v:1, start:todayStr(), config:{dailyNew:34, intervals:[1,2,4,7,15]}, cards:{}, log:{}, custom:[], overrides:{}, deleted:[] }; }
 let state;
 function loadState(){
-  try{ const raw = localStorage.getItem(LS_KEY); if(raw){ const s = JSON.parse(raw); if(s && s.v===1){ if(!Array.isArray(s.custom)) s.custom = []; if(!s.overrides || typeof s.overrides !== 'object') s.overrides = {}; return s; } } }catch(e){}
+  try{ const raw = localStorage.getItem(LS_KEY); if(raw){ const s = JSON.parse(raw); if(s && s.v===1){ if(!Array.isArray(s.custom)) s.custom = []; if(!s.overrides || typeof s.overrides !== 'object') s.overrides = {}; if(!Array.isArray(s.deleted)) s.deleted = []; return s; } } }catch(e){}
   return defaultState();
 }
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
@@ -521,14 +526,16 @@ function roundInfo(){
   const d = Math.max(1, dayIndex());
   return { round:Math.ceil(d/5), dayInRound:((d-1)%5)+1, dayIndex:d };
 }
-function unlearnedIds(){ return CARDS.filter(c => !rec(c.id).learned).map(c => c.id); }
+function liveCards(){ const d = new Set(state.deleted||[]); return CARDS.filter(c => !d.has(c.id)); }
+function isDeleted(id){ return (state.deleted||[]).includes(id); }
+function unlearnedIds(){ return liveCards().filter(c => !rec(c.id).learned).map(c => c.id); }
 function todayNewIds(){
   const t = todayStr();
   if(!state.today || state.today.d !== t){
     state.today = { d: t, newIds: shuffle(unlearnedIds()).slice(0, state.config.dailyNew) };
     saveState();
   }
-  return state.today.newIds.filter(id => !rec(id).learned);
+  return state.today.newIds.filter(id => !rec(id).learned && !isDeleted(id));
 }
 function dueIntervals(cid){
   const r = rec(cid); if(!r.learned) return [];
@@ -542,7 +549,7 @@ function isDue(cid){
   if(dueIntervals(cid).length) return true;
   return (r.extra||[]).includes(todayStr());
 }
-function dueIds(){ return shuffle(CARDS.filter(c => isDue(c.id)).map(c => c.id)); }
+function dueIds(){ return shuffle(liveCards().filter(c => isDue(c.id)).map(c => c.id)); }
 function cardById(id){ return CARDS.find(c => c.id === id); }
 function ansOf(id){
   const o = (state.overrides||{})[id];
@@ -550,8 +557,8 @@ function ansOf(id){
   const c = cardById(id);
   return c ? c.a : '';
 }
-function masteredCount(){ return CARDS.filter(c => rec(c.id).mastered).length; }
-function learnedCount(){ return CARDS.filter(c => rec(c.id).learned).length; }
+function masteredCount(){ return liveCards().filter(c => rec(c.id).mastered).length; }
+function learnedCount(){ return liveCards().filter(c => rec(c.id).learned).length; }
 function streak(){
   let n = 0; let d = todayStr();
   while(state.log[d] && (state.log[d].learn + state.log[d].review) > 0){ n++; d = addDays(d, -1); }
@@ -652,9 +659,9 @@ function renderToday(){
   const remainingNew = nNew;
   const doneReview = doneToday ? doneToday.review : 0;
   const remainingReview = Math.max(0, due.length - doneReview);
-  const allDone = learned >= CARDS.length;
+  const allDone = learned >= liveCards().length;
   v.innerHTML = ''
-  + '<div class="section-head"><h2>今日记忆任务</h2><p>每天 '+state.config.dailyNew+' 张新卡，5 天学完全部 167 道；复习按艾宾浩斯间隔 '+state.config.intervals.join('/')+' 天自动排期。</p></div>'
+  + '<div class="section-head"><h2>今日记忆任务</h2><p>每天 '+state.config.dailyNew+' 张新卡，5 天学完全部 '+liveCards().length+' 道；复习按艾宾浩斯间隔 '+state.config.intervals.join('/')+' 天自动排期。</p></div>'
   + '<div class="curve-wrap"><h3>艾宾浩斯记忆曲线</h3><div class="cap">不复习的遗忘曲线（灰虚线）与按时复习后的保持率（绿实线，绿色圆点为复习节点）</div>' + curveSVG() + '</div>'
   + '<div class="today-tasks">'
   + '<div class="task-card"><div class="t-head">'
@@ -788,7 +795,7 @@ function renderSessionSummary(s){
 }
 
 /* ---------- 浏览 ---------- */
-let browseState = { ch:0, kw:'' };
+let browseState = { ch:0, kw:'', edit:false, sel:{} };
 function renderBrowse(){
   const v = $('#view-browse');
   const kw = browseState.kw.trim().toLowerCase();
@@ -826,6 +833,33 @@ function renderBrowse(){
       }).join(''));
 }
 function setBrowseCh(ch){ browseState.ch = ch; renderBrowse(); }
+function toggleDelMode(){
+  browseState.edit = !browseState.edit;
+  if(!browseState.edit) browseState.sel = {};
+  renderBrowse();
+}
+function toggleDelSel(id, on){
+  if(on) browseState.sel[id] = true;
+  else delete browseState.sel[id];
+  renderBrowse();
+}
+function confirmDeleteSelected(){
+  const ids = Object.keys(browseState.sel).filter(k => browseState.sel[k]).map(Number);
+  if(!ids.length){ toast('请先勾选要删除的题目'); return; }
+  if(!confirm('确定删除所选 '+ids.length+' 道题吗？删除后不会出现在学习、复习与浏览中，也会同步到云端。内置题目删除后无法恢复。')){
+    browseState.sel = {}; renderBrowse(); return;
+  }
+  if(!Array.isArray(state.deleted)) state.deleted = [];
+  ids.forEach(id => {
+    if(!state.deleted.includes(id)) state.deleted.push(id);
+    state.custom = (state.custom||[]).filter(c => c.id !== id);
+    if(state.cards) delete state.cards[id];
+  });
+  saveState(); ghAutoPush();
+  browseState.sel = {}; browseState.edit = false;
+  renderTop(); renderBrowse(); route();
+  toast('已删除 '+ids.length+' 道题');
+}
 function editAns(id){
   const el = document.getElementById('bi-edit-'+id);
   if(el){ el.classList.add('open'); const ta = document.getElementById('bi-edit-ta-'+id); if(ta) ta.focus(); }
@@ -849,7 +883,7 @@ function cancelEditAns(id){
 function renderPlan(){
   const v = $('#view-plan');
   const ri = roundInfo();
-  const totalDays = Math.ceil(CARDS.length / state.config.dailyNew);
+  const totalDays = Math.ceil(liveCards().length / state.config.dailyNew);
   const rows = [];
   const today = todayStr();
   const unlearned = unlearnedIds().length;
@@ -858,7 +892,7 @@ function renderPlan(){
     const r = Math.ceil(d/5), day = ((d-1)%5)+1;
     if(dayDiff(today, date) < -20 && day > 1) continue; // 只展示从当前轮开始的近期
     const reviews = [];
-    CARDS.forEach(c => {
+    liveCards().forEach(c => {
       const cr = rec(c.id);
       if(cr.learned){
         cr.ivs.forEach((iv,i)=>{
@@ -866,7 +900,7 @@ function renderPlan(){
         });
       }
     });
-    const remain = Math.max(0, CARDS.length - (d-1)*state.config.dailyNew);
+    const remain = Math.max(0, liveCards().length - (d-1)*state.config.dailyNew);
     const newN = d <= totalDays ? Math.min(state.config.dailyNew, remain) : 0;
     const isToday = date === today;
     rows.push({d, date, r, day, newN, reviews, isToday});
@@ -916,14 +950,14 @@ function renderStats(){
   }).join('');
   // 章节进度
   const chap = Object.keys(CH).map(k => {
-    const cs = CARDS.filter(c => c.ch === +k);
+    const cs = liveCards().filter(c => c.ch === +k);
     const done = cs.filter(c => rec(c.id).learned).length;
     const pct = Math.round(done/cs.length*100);
     return '<div class="cp-row"><div class="cp-name">'+CH[k]+'</div><div class="cp-bar"><i style="width:'+pct+'%;background:'+CH_COLOR[+k-1]+'"></i></div><div class="cp-num">'+done+' / '+cs.length+'</div></div>';
   }).join('');
   v.innerHTML = '<div class="section-head"><h2>学习统计</h2><p>坚持就是胜利，连续学习 '+st+' 天。</p></div>'
   + '<div class="grid-3">'
-  + '<div class="stat"><div class="num">'+learned+'</div><div class="lbl">已学题目（共 '+CARDS.length+' 道）</div></div>'
+  + '<div class="stat"><div class="num">'+learned+'</div><div class="lbl">已学题目（共 '+liveCards().length+' 道）</div></div>'
   + '<div class="stat"><div class="num">'+mastered+'</div><div class="lbl">已毕业（完成全部复习节点）</div></div>'
   + '<div class="stat"><div class="num">'+revTotal+'</div><div class="lbl">累计复习次数</div></div>'
   + '</div>'
@@ -1045,7 +1079,7 @@ function parseBackup(text){
     let data = text;
     if(data.indexOf('EBA1:') === 0) data = data.slice(5);
     const obj = JSON.parse(decodeURIComponent(data));
-    if(obj && obj.v === 1 && obj.start && obj.config && obj.config.intervals && obj.cards && obj.log){ if(!Array.isArray(obj.custom)) obj.custom = []; if(!obj.overrides || typeof obj.overrides !== 'object') obj.overrides = {}; return obj; }
+    if(obj && obj.v === 1 && obj.start && obj.config && obj.config.intervals && obj.cards && obj.log){ if(!Array.isArray(obj.custom)) obj.custom = []; if(!obj.overrides || typeof obj.overrides !== 'object') obj.overrides = {}; if(!Array.isArray(obj.deleted)) obj.deleted = []; return obj; }
   }catch(e){}
   return null;
 }
@@ -1196,6 +1230,7 @@ function ghPull(){
       if(!s || s.v !== 1) throw new Error('云端数据格式无效');
       if(!Array.isArray(s.custom)) s.custom = [];
       if(!s.overrides || typeof s.overrides !== 'object') s.overrides = {};
+      if(!Array.isArray(s.deleted)) s.deleted = [];
       state = s;
       applyCustomCards();
       saveState(); renderTop(); route();
@@ -1232,7 +1267,7 @@ function saveSettings(){
 }
 function resetAll(){
   if(confirm('确定清空全部学习记录吗？将回到第 1 轮第 1 天重新开始。已导入的自定义题目和答案修改会保留。此操作不可恢复。')){
-    state = Object.assign(defaultState(), { custom: (state.custom||[]).slice(), overrides: (state.overrides||{}) });
+    state = Object.assign(defaultState(), { custom: (state.custom||[]).slice(), overrides: (state.overrides||{}), deleted: (state.deleted||[]).slice() });
     try{ saveState(); }catch(e){}
     renderTop(); route(); ghAutoPush();
     toast('已重置全部学习记录');
