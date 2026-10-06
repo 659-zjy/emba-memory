@@ -147,6 +147,10 @@ a{color:inherit;text-decoration:none}
 .browse-item .bi-a{display:none;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);font-size:13.5px;line-height:1.8;color:var(--ink)}
 .browse-item.open .bi-a{display:block}
 .bi-meta{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--ink-soft);flex-wrap:wrap}
+.bi-edit{display:none;margin-top:10px;padding-top:12px;border-top:1px dashed var(--line)}
+.bi-edit.open{display:block}
+.bi-edit textarea{width:100%;box-sizing:border-box;font-size:13px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);color:var(--ink);line-height:1.7;resize:vertical;font-family:inherit}
+.btn-mini{padding:5px 12px;font-size:12px;border-radius:8px}
 .tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700}
 .tag.learned{background:var(--blue-soft);color:var(--blue)}
 .tag.mastered{background:var(--green-soft);color:var(--green)}
@@ -489,10 +493,10 @@ function fmtDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(
 function addDays(s, n){ const d = parseDate(s); d.setDate(d.getDate()+n); return fmtDate(d); }
 function dayDiff(a, b){ return Math.round((parseDate(b)-parseDate(a))/86400000); }
 function wd(s){ const d = parseDate(s); return '周'+'日一二三四五六'[d.getDay()]; }
-function defaultState(){ return { v:1, start:todayStr(), config:{dailyNew:34, intervals:[1,2,4,7,15]}, cards:{}, log:{}, custom:[] }; }
+function defaultState(){ return { v:1, start:todayStr(), config:{dailyNew:34, intervals:[1,2,4,7,15]}, cards:{}, log:{}, custom:[], overrides:{} }; }
 let state;
 function loadState(){
-  try{ const raw = localStorage.getItem(LS_KEY); if(raw){ const s = JSON.parse(raw); if(s && s.v===1){ if(!Array.isArray(s.custom)) s.custom = []; return s; } } }catch(e){}
+  try{ const raw = localStorage.getItem(LS_KEY); if(raw){ const s = JSON.parse(raw); if(s && s.v===1){ if(!Array.isArray(s.custom)) s.custom = []; if(!s.overrides || typeof s.overrides !== 'object') s.overrides = {}; return s; } } }catch(e){}
   return defaultState();
 }
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
@@ -533,6 +537,12 @@ function isDue(cid){
 }
 function dueIds(){ return shuffle(CARDS.filter(c => isDue(c.id)).map(c => c.id)); }
 function cardById(id){ return CARDS.find(c => c.id === id); }
+function ansOf(id){
+  const o = (state.overrides||{})[id];
+  if(o && typeof o.a === 'string' && o.a.length) return o.a;
+  const c = cardById(id);
+  return c ? c.a : '';
+}
 function masteredCount(){ return CARDS.filter(c => rec(c.id).mastered).length; }
 function learnedCount(){ return CARDS.filter(c => rec(c.id).learned).length; }
 function streak(){
@@ -701,7 +711,7 @@ function renderSession(mode){
   + '<div class="flash-card'+(session.open?' open':'')+(mode==='review'?' review':'')+'" id="flash-card">'
   + '<div class="fc-chap"><span class="band" style="background:'+CH_COLOR[c.ch-1]+'"></span>'+CH[c.ch]+'</div>'
   + '<div class="q">'+esc(c.q)+'</div>'
-  + '<div class="a-wrap"><div class="a">'+c.a+'</div></div>'
+  + '<div class="a-wrap"><div class="a">'+ansOf(c.id)+'</div></div>'
   + '</div>'
   + '<div class="flash-actions" id="flash-actions">'
   + (session.open
@@ -774,7 +784,7 @@ function renderBrowse(){
   const kw = browseState.kw.trim().toLowerCase();
   let list = CARDS;
   if(browseState.ch) list = list.filter(c => c.ch === browseState.ch);
-  if(kw) list = list.filter(c => c.q.toLowerCase().includes(kw) || c.a.toLowerCase().includes(kw));
+  if(kw) list = list.filter(c => c.q.toLowerCase().includes(kw) || ansOf(c.id).toLowerCase().includes(kw));
   v.innerHTML = '<div class="section-head"><h2>题库浏览</h2><p>共 '+CARDS.length+' 道题，可按章节筛选、关键词搜索，点题目展开答案。</p></div>'
   + '<div class="chip-row">'
   + '<button class="chip-btn'+(browseState.ch===0?' on':'')+'" onclick="setBrowseCh(0)">全部 ('+CARDS.length+')</button>'
@@ -791,13 +801,39 @@ function renderBrowse(){
         const due = r.learned && isDue(c.id) ? '<span class="tag due">今日到期</span>' : '';
         return '<div class="browse-item" style="border-left-color:'+CH_COLOR[c.ch-1]+'">'
           + '<div class="bi-q" onclick="this.parentNode.classList.toggle(\'open\')">'+esc(c.q)+'</div>'
-          + '<div class="bi-a">'+c.a+'</div>'
+          + '<div class="bi-a">'+ansOf(c.id)+'</div>'
           + '<div class="bi-meta"><span style="color:'+CH_COLOR[c.ch-1]+';font-weight:700">'+CH[c.ch]+'</span>'+badge+due
           + (r.learned ? '<span>学习于 '+r.learned+(r.masteredDate ? ' · 毕业 '+r.masteredDate : '')+'</span>' : '')
-          + '</div></div>';
+          + '<button class="btn btn-line btn-mini" onclick="editAns('+c.id+')">更新答案</button>'
+          + '</div>'
+          + '<div class="bi-edit" id="bi-edit-'+c.id+'">'
+          + '<textarea id="bi-edit-ta-'+c.id+'" rows="4" placeholder="粘贴新的答案文字，保存后在学习与复习中同步生效">'+esc(ansOf(c.id))+'</textarea>'
+          + '<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">'
+          + '<button class="btn btn-main btn-mini" onclick="saveEditAns('+c.id+')">保存答案</button>'
+          + '<button class="btn btn-line btn-mini" onclick="cancelEditAns('+c.id+')">取消</button>'
+          + '</div></div>'
+          + '</div>';
       }).join(''));
 }
 function setBrowseCh(ch){ browseState.ch = ch; renderBrowse(); }
+function editAns(id){
+  const el = document.getElementById('bi-edit-'+id);
+  if(el){ el.classList.add('open'); const ta = document.getElementById('bi-edit-ta-'+id); if(ta) ta.focus(); }
+}
+function saveEditAns(id){
+  const ta = document.getElementById('bi-edit-ta-'+id);
+  if(!ta) return;
+  const v = ta.value.replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim();
+  if(!v){ toast('答案不能为空'); return; }
+  if(!state.overrides || typeof state.overrides !== 'object') state.overrides = {};
+  state.overrides[id] = { a: v };
+  saveState(); renderBrowse(); ghAutoPush();
+  toast('答案已更新');
+}
+function cancelEditAns(id){
+  const el = document.getElementById('bi-edit-'+id);
+  if(el) el.classList.remove('open');
+}
 
 /* ---------- 轮次计划 ---------- */
 function renderPlan(){
@@ -999,7 +1035,7 @@ function parseBackup(text){
     let data = text;
     if(data.indexOf('EBA1:') === 0) data = data.slice(5);
     const obj = JSON.parse(decodeURIComponent(data));
-    if(obj && obj.v === 1 && obj.start && obj.config && obj.config.intervals && obj.cards && obj.log) return obj;
+    if(obj && obj.v === 1 && obj.start && obj.config && obj.config.intervals && obj.cards && obj.log){ if(!Array.isArray(obj.custom)) obj.custom = []; if(!obj.overrides || typeof obj.overrides !== 'object') obj.overrides = {}; return obj; }
   }catch(e){}
   return null;
 }
@@ -1148,6 +1184,8 @@ function ghPull(){
       let s;
       try{ s = JSON.parse(f.content); }catch(e){ throw new Error('云端数据无法解析'); }
       if(!s || s.v !== 1) throw new Error('云端数据格式无效');
+      if(!Array.isArray(s.custom)) s.custom = [];
+      if(!s.overrides || typeof s.overrides !== 'object') s.overrides = {};
       state = s;
       applyCustomCards();
       saveState(); renderTop(); route();
