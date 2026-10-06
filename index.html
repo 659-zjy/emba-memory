@@ -522,7 +522,14 @@ function roundInfo(){
   return { round:Math.ceil(d/5), dayInRound:((d-1)%5)+1, dayIndex:d };
 }
 function unlearnedIds(){ return CARDS.filter(c => !rec(c.id).learned).map(c => c.id); }
-function todayNewIds(){ return shuffle(unlearnedIds()).slice(0, state.config.dailyNew); }
+function todayNewIds(){
+  const t = todayStr();
+  if(!state.today || state.today.d !== t){
+    state.today = { d: t, newIds: shuffle(unlearnedIds()).slice(0, state.config.dailyNew) };
+    saveState();
+  }
+  return state.today.newIds.filter(id => !rec(id).learned);
+}
 function dueIntervals(cid){
   const r = rec(cid); if(!r.learned) return [];
   const t = todayStr(), out = [];
@@ -642,7 +649,7 @@ function renderToday(){
   const due = dueIds();
   const learned = learnedCount();
   const doneToday = state.log[todayStr()];
-  const remainingNew = Math.max(0, nNew - (doneToday ? doneToday.learn : 0));
+  const remainingNew = nNew;
   const doneReview = doneToday ? doneToday.review : 0;
   const remainingReview = Math.max(0, due.length - doneReview);
   const allDone = learned >= CARDS.length;
@@ -667,10 +674,13 @@ function renderToday(){
   + '</div></div>'
   + '<div class="panel" style="margin-top:18px"><h3 style="margin-bottom:10px">今日安排说明</h3>'
   + '<ul style="font-size:13.5px;color:var(--ink-soft);line-height:2;padding-left:18px">'
-  + '<li>新卡学习：每天固定 <b style="color:var(--ink)">'+state.config.dailyNew+' 张</b>（可在设置中调整），从未学题目中<b style="color:var(--ink)">随机抽取</b>、顺序打乱。</li>'
+  + '<li>新卡学习：每天固定 <b style="color:var(--ink)">'+state.config.dailyNew+' 张</b>（可在设置中调整），每天从未学题目中<b style="color:var(--ink)">随机抽取一组</b>，今日任务与学习新卡保持一致、顺序打乱。</li>'
   + '<li>复习节奏：新卡学习当天起，第 <b style="color:var(--ink)">'+state.config.intervals.join(' / ')+' 天</b> 到期复习；答「模糊/忘了」会自动在明天追加一次复习。</li>'
   + '<li>轮次划分：每 5 天为一轮，「第 X 轮 · 第 Y 天」在右上角实时显示，进度一目了然。</li>'
-  + '</ul></div>';
+  + '</ul></div>'
+  + '<div style="margin-top:24px;padding-top:18px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
+  + '<div><h3 style="margin-bottom:4px">一切重来</h3><p style="font-size:13px;color:var(--ink-soft)">清空全部学习记录，回到第 1 轮第 1 天重新开始（已导入的自定义题目和答案修改会保留）。</p></div>'
+  + '<button class="btn btn-red" onclick="resetAll()">重置全部学习记录</button></div>';
 }
 
 /* ---------- 学习 / 复习 会话 ---------- */
@@ -1221,10 +1231,11 @@ function saveSettings(){
   toast('设置已保存');
 }
 function resetAll(){
-  if(confirm('确定清空全部学习记录吗？此操作不可恢复。')){
-    try{ localStorage.removeItem(LS_KEY); }catch(e){}
-    location.hash = '#/today';
-    location.reload();
+  if(confirm('确定清空全部学习记录吗？将回到第 1 轮第 1 天重新开始。已导入的自定义题目和答案修改会保留。此操作不可恢复。')){
+    state = Object.assign(defaultState(), { custom: (state.custom||[]).slice(), overrides: (state.overrides||{}) });
+    try{ saveState(); }catch(e){}
+    renderTop(); route(); ghAutoPush();
+    toast('已重置全部学习记录');
   }
 }
 
