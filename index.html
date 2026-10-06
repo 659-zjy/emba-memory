@@ -667,7 +667,6 @@ function renderToday(){
   const allDone = learned >= liveCards().length;
   v.innerHTML = ''
   + '<div class="section-head"><h2>今日记忆任务</h2><p>每天 '+state.config.dailyNew+' 张新卡，5 天学完全部 '+liveCards().length+' 道；复习按艾宾浩斯间隔 '+state.config.intervals.join('/')+' 天自动排期。</p></div>'
-  + '<div class="curve-wrap"><h3>艾宾浩斯记忆曲线</h3><div class="cap">不复习的遗忘曲线（灰虚线）与按时复习后的保持率（绿实线，绿色圆点为复习节点）</div>' + curveSVG() + '</div>'
   + '<div class="today-tasks">'
   + '<div class="task-card"><div class="t-head">'
   + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#33658A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>'
