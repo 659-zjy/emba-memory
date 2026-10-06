@@ -1239,25 +1239,34 @@ function ghTest(){
     .then(u => { ghStatusMsg('连接成功：'+(u.login||'')+(ghLastSync() ? '；上次同步 '+ghLastSync() : '')); toast('GitHub 连接成功'); })
     .catch(e => { ghStatusMsg('连接失败：'+e.message+'（令牌无效或网络异常）'); toast('连接失败'); });
 }
-function ghPush(){
+async function ghPush(){
   const t = ghToken();
   if(!t){ toast('请先保存令牌'); return; }
+  let gid = ghGet('g');
+  if(!gid) gid = await ghFindGist();
+  if(!gid){
+    // 第一次：创建云端进度
+    state.lastSync = Date.now(); saveState();
+    const content = JSON.stringify(state);
+    ghStatusMsg('正在创建云端进度…');
+    fetch('https://api.github.com/gists', { method:'POST', headers: ghHeaders(), body: JSON.stringify({ description:'嵌入式八股 · 艾宾浩斯记忆进度', public:false, files:{ 'eba-progress.json':{ content } } }) })
+      .then(g => { if(g.id) ghSet('g', g.id); const now = new Date().toLocaleString('zh-CN'); ghSet('ts', now); ghStatusMsg('上传成功；上次同步 '+now); toast('进度已上传到云端'); })
+      .catch(e => { ghStatusMsg('上传失败：'+e.message); toast('上传失败，请检查令牌与网络'); });
+    return;
+  }
+  ghSet('g', gid);
+  state.lastSync = Date.now(); saveState();
   const content = JSON.stringify(state);
-  const gid = ghGet('g');
   ghStatusMsg('正在上传进度…');
-  const url = gid ? ('https://api.github.com/gists/'+gid) : 'https://api.github.com/gists';
-  const method = gid ? 'PATCH' : 'POST';
-  const body = gid
-    ? { files:{ 'eba-progress.json':{ content } } }
-    : { description:'嵌入式八股 · 艾宾浩斯记忆进度', public:false, files:{ 'eba-progress.json':{ content } } };
-  fetch(url, { method, headers: ghHeaders(), body: JSON.stringify(body) })
-    .then(g => { if(g.id) ghSet('g', g.id); const now = new Date().toLocaleString('zh-CN'); ghSet('ts', now); ghStatusMsg('上传成功；上次同步 '+now); toast('进度已上传到云端'); })
+  fetch('https://api.github.com/gists/'+gid, { method:'PATCH', headers: ghHeaders(), body: JSON.stringify({ files:{ 'eba-progress.json':{ content } } }) })
+    .then(g => { if(g.id) ghSet('g', gid); const now = new Date().toLocaleString('zh-CN'); ghSet('ts', now); ghStatusMsg('上传成功；上次同步 '+now); toast('进度已上传到云端'); })
     .catch(e => { ghStatusMsg('上传失败：'+e.message); toast('上传失败，请检查令牌与网络'); });
 }
-function ghPull(){
-  const t = ghToken(), gid = ghGet('g');
-  if(!t){ toast('请先保存令牌'); return; }
-  if(!gid){ toast('云端还没有进度（请先在一台设备上传）'); return; }
+async function ghPull(){
+  const t = ghToken();
+  if(!t) return;
+  let gid = ghGet('g');
+  if(!gid){ gid = await ghFindGist(); if(!gid){ ghStatusMsg('云端还没有进度（请先在一台设备上传）'); return; } ghSet('g', gid); }
   ghStatusMsg('正在拉取进度…');
   fetch('https://api.github.com/gists/'+gid, { headers: ghHeaders() })
     .then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
@@ -1270,6 +1279,8 @@ function ghPull(){
       if(!Array.isArray(s.custom)) s.custom = [];
       if(!s.overrides || typeof s.overrides !== 'object') s.overrides = {};
       if(!Array.isArray(s.deleted)) s.deleted = [];
+      const localTs = state.lastSync || 0, cloudTs = s.lastSync || 0;
+      if(localTs > cloudTs){ ghStatusMsg('本地进度比云端新，未覆盖（上次同步 '+ghLastSync()+'）'); toast('本地较新，保留本地'); return; }
       state = s;
       applyCustomCards();
       saveState(); renderTop(); route();
@@ -1285,8 +1296,20 @@ function ghAutoPush(){
   clearTimeout(ghTimer);
   ghTimer = setTimeout(() => { ghPush(); }, 2000);
 }
+async function ghFindGist(){
+  const t = ghToken();
+  if(!t) return null;
+  try{
+    const me = await fetch('https://api.github.com/user', { headers: ghHeaders() }).then(r => r.ok ? r.json() : null);
+    if(!me || !me.login) return null;
+    const list = await fetch('https://api.github.com/users/'+encodeURIComponent(me.login)+'/gists?per_page=100', { headers: ghHeaders() }).then(r => r.ok ? r.json() : null);
+    if(!Array.isArray(list)) return null;
+    const hit = list.find(g => g && g.files && g.files['eba-progress.json'] && (g.description||'').indexOf('嵌入式八股') >= 0);
+    return hit ? hit.id : null;
+  }catch(e){ return null; }
+}
 function ghAutoPull(){
-  if(!ghAutoOn() || !ghToken() || !ghGet('g')) return;
+  if(!ghToken()) return;
   setTimeout(() => { ghPull(); }, 1200);
 }
 function ghToggleAuto(on){
