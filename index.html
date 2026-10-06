@@ -262,7 +262,7 @@ a{color:inherit;text-decoration:none}
       <a href="#/settings" data-route="settings">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>设置</a>
     </nav>
-    <div class="side-foot">进度保存在本机浏览器<br>每天 34 张新卡 · 5 天学完 167 道</div>
+    <div class="side-foot">进度保存在本机浏览器<br><span id="side-foot-n"></span></div>
   </aside>
   <div class="overlay" id="overlay"></div>
 
@@ -649,6 +649,8 @@ function renderTop(){
   $('#top-right').innerHTML =
     '<span class="chip">第 '+ri.round+' 轮 · 第 '+ri.dayInRound+' 天</span>'
     + '<span class="chip green">连续 '+streak()+' 天</span>';
+  const _sf = $('#side-foot-n');
+  if(_sf) _sf.textContent = '每天 '+state.config.dailyNew+' 张新卡 · '+Math.max(1, Math.ceil(liveCards().length/state.config.dailyNew))+' 天学完 '+liveCards().length+' 道';
 }
 
 /* ---------- 今日 ---------- */
@@ -801,6 +803,7 @@ function renderSessionSummary(s){
 let browseState = { ch:0, kw:'', edit:false, sel:{} };
 function renderBrowse(){
   const v = $('#view-browse');
+  if(browseState.ch && liveCards().filter(c => c.ch === browseState.ch).length === 0) browseState.ch = 0;
   const kw = browseState.kw.trim().toLowerCase();
   let list = liveCards();
   if(browseState.ch) list = list.filter(c => c.ch === browseState.ch);
@@ -812,6 +815,7 @@ function renderBrowse(){
   + (browseState.edit ? '<button class="sel-all" onclick="selectAllIn(0)">全选全部</button>' : '')
   + Object.keys(CH).map(k => {
       const n = liveCards().filter(c => c.ch === +k).length;
+      if(n === 0) return '';
       return '<button class="chip-btn'+(browseState.ch===+k?' on':'')+'" onclick="setBrowseCh('+k+')" style="'+(browseState.ch===+k?'':'')+'">'+CH[k]+' ('+n+')</button>'
         + (browseState.edit ? '<button class="sel-all" onclick="selectAllIn('+k+')">全选</button>' : '');
     }).join('')
@@ -988,10 +992,12 @@ function renderStats(){
 /* ---------- 设置 ---------- */
 function renderSettings(){
   const v = $('#view-settings');
+  const _planDays = Math.max(1, Math.ceil(liveCards().length / state.config.dailyNew));
+  const _lastN = Math.max(0, liveCards().length - (_planDays - 1) * state.config.dailyNew);
   v.innerHTML = '<div class="section-head"><h2>设置</h2><p>调整每天学习量与复习间隔，保存后对新卡生效。</p></div>'
   + '<div class="panel">'
-  + '<div class="set-row"><div class="s-label"><b>每天新卡数</b><p>5 天学完 167 道 = 每天 34 张（第 5 天收尾 31 张），可自行调整。</p></div>'
-  + '<input type="number" id="set-new" min="1" max="167" value="'+state.config.dailyNew+'"></div>'
+  + '<div class="set-row"><div class="s-label"><b>每天新卡数</b><p>'+_planDays+' 天学完 '+liveCards().length+' 道 = 每天 '+state.config.dailyNew+' 张（最后一天收尾 '+_lastN+' 张），可自行调整。</p></div>'
+  + '<input type="number" id="set-new" min="1" max="'+liveCards().length+'" value="'+state.config.dailyNew+'"></div>'
   + '<div class="set-row"><div class="s-label"><b>复习间隔（天）</b><p>学习后第几天复习，艾宾浩斯推荐 1/2/4/7/15。</p></div>'
   + '<input type="text" id="set-iv" value="'+state.config.intervals.join(',')+'"></div>'
   + '<div class="set-row"><div class="s-label"><b>轮次周期</b><p>以 5 天为一轮推进学习计划（当前已固定为 5）。</p></div>'
