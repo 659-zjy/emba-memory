@@ -1129,6 +1129,20 @@ function parseQuestions(text){
     }
     if(out.length) return out;
   }
+  // 方式1.5：文档式 —— ## 标题即问题、标题下正文即答案（常见面试文档结构）
+  const docBlocks = t.split(/^#{2,6}\s+/m);
+  if(docBlocks.length > 1){
+    const docOut = [];
+    for(let i=1;i<docBlocks.length;i++){
+      const lines = docBlocks[i].split('\n');
+      let q = lines[0].trim();
+      if(!q) continue;
+      q = q.replace(/\s*[（(][^（()）]*[）)]\s*$/,'');
+      const a = lines.slice(1).join('\n').trim();
+      if(q.length >= 4 && a.length >= 15) docOut.push({q, a});
+    }
+    if(docOut.length >= 2) return docOut;
+  }
   // 方式2：Q: ... / A: ... 成对
   const lines2 = t.split('\n');
   let curQ = null, curA = [];
