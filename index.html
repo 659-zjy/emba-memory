@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>嵌入式八股 · 艾宾浩斯记忆</title>
 <link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@600;700;900&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous"></script>
 <style>
 :root{
   --paper:#F3EFE3; --paper-2:#EAE4D2; --card:#FEFCF6;
@@ -301,9 +302,9 @@ a{color:inherit;text-decoration:none}
 const CH = {
   1:"C语言·基础语法",2:"C语言·关键字与预处理",3:"C语言·编译与链接",4:"C语言·构建工具",
   5:"C语言·数组指针与函数",6:"C语言·字符串与常用函数",7:"C语言·内存管理",8:"C语言·大小端",
-  9:"C++ 篇",10:"操作系统·核心机制与RTOS",11:"操作系统·进程与线程",12:"计算机网络"
+  9:"C++ 篇",10:"操作系统·核心机制与RTOS",11:"操作系统·进程与线程",12:"计算机网络",13:"自定义题库"
 };
-const CH_COLOR = ['#33658A','#2E7D5B','#8A6D3B','#7A4E9B','#C2412C','#3E7C6B','#5B6E9B','#B07E2E','#4E7A8A','#6B5B9B','#2F6F8F','#A65336'];
+const CH_COLOR = ['#33658A','#2E7D5B','#8A6D3B','#7A4E9B','#C2412C','#3E7C6B','#5B6E9B','#B07E2E','#4E7A8A','#6B5B9B','#2F6F8F','#A65336','#5A8B6F'];
 const CARDS = [
 {id:1,ch:1,q:"运算符优先级从高到低如何排列？结合方向有什么例外？",a:"优先级：括号/下标 ( ) [ ] → 单目 ! ++ -- sizeof & * → 算术 * / % → + - → 移位 → 关系 → 逻辑 && || → 赋值 = += -=（最低）。结合方向绝大多数从左到右；例外：赋值运算符、条件运算符 ?:、单目运算符从右到左。"},
 {id:2,ch:1,q:"类型转换遵循什么规则？",a:"低等类型向高等类型转换：char/short → int → unsigned int → long → unsigned long → float → double（double 最高）。例：3.0 * 6 中 6 提升为浮点型，结果为浮点。"},
@@ -488,10 +489,10 @@ function fmtDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(
 function addDays(s, n){ const d = parseDate(s); d.setDate(d.getDate()+n); return fmtDate(d); }
 function dayDiff(a, b){ return Math.round((parseDate(b)-parseDate(a))/86400000); }
 function wd(s){ const d = parseDate(s); return '周'+'日一二三四五六'[d.getDay()]; }
-function defaultState(){ return { v:1, start:todayStr(), config:{dailyNew:34, intervals:[1,2,4,7,15]}, cards:{}, log:{} }; }
+function defaultState(){ return { v:1, start:todayStr(), config:{dailyNew:34, intervals:[1,2,4,7,15]}, cards:{}, log:{}, custom:[] }; }
 let state;
 function loadState(){
-  try{ const raw = localStorage.getItem(LS_KEY); if(raw){ const s = JSON.parse(raw); if(s && s.v===1) return s; } }catch(e){}
+  try{ const raw = localStorage.getItem(LS_KEY); if(raw){ const s = JSON.parse(raw); if(s && s.v===1){ if(!Array.isArray(s.custom)) s.custom = []; return s; } } }catch(e){}
   return defaultState();
 }
 function saveState(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
@@ -499,6 +500,14 @@ function rec(id){ if(!state.cards[id]) state.cards[id] = {learned:null, ivs:[], 
 function logRec(){ const t = todayStr(); if(!state.log[t]) state.log[t] = {learn:0, review:0, good:0, fuzzy:0, forgot:0}; return state.log[t]; }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function toast(msg){ const el = $('#toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(()=>el.classList.remove('show'), 2200); }
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
 
 /* =========================================================
    记忆排期：艾宾浩斯 + 5天一轮
@@ -509,7 +518,7 @@ function roundInfo(){
   return { round:Math.ceil(d/5), dayInRound:((d-1)%5)+1, dayIndex:d };
 }
 function unlearnedIds(){ return CARDS.filter(c => !rec(c.id).learned).map(c => c.id); }
-function todayNewIds(){ return unlearnedIds().slice(0, state.config.dailyNew); }
+function todayNewIds(){ return shuffle(unlearnedIds()).slice(0, state.config.dailyNew); }
 function dueIntervals(cid){
   const r = rec(cid); if(!r.learned) return [];
   const t = todayStr(), out = [];
@@ -522,7 +531,7 @@ function isDue(cid){
   if(dueIntervals(cid).length) return true;
   return (r.extra||[]).includes(todayStr());
 }
-function dueIds(){ return CARDS.filter(c => isDue(c.id)).map(c => c.id); }
+function dueIds(){ return shuffle(CARDS.filter(c => isDue(c.id)).map(c => c.id)); }
 function cardById(id){ return CARDS.find(c => c.id === id); }
 function masteredCount(){ return CARDS.filter(c => rec(c.id).mastered).length; }
 function learnedCount(){ return CARDS.filter(c => rec(c.id).learned).length; }
@@ -648,7 +657,7 @@ function renderToday(){
   + '</div></div>'
   + '<div class="panel" style="margin-top:18px"><h3 style="margin-bottom:10px">今日安排说明</h3>'
   + '<ul style="font-size:13.5px;color:var(--ink-soft);line-height:2;padding-left:18px">'
-  + '<li>新卡学习：每天固定 <b style="color:var(--ink)">'+state.config.dailyNew+' 张</b>（可在设置中调整），按章节顺序依次推进。</li>'
+  + '<li>新卡学习：每天固定 <b style="color:var(--ink)">'+state.config.dailyNew+' 张</b>（可在设置中调整），从未学题目中<b style="color:var(--ink)">随机抽取</b>、顺序打乱。</li>'
   + '<li>复习节奏：新卡学习当天起，第 <b style="color:var(--ink)">'+state.config.intervals.join(' / ')+' 天</b> 到期复习；答「模糊/忘了」会自动在明天追加一次复习。</li>'
   + '<li>轮次划分：每 5 天为一轮，「第 X 轮 · 第 Y 天」在右上角实时显示，进度一目了然。</li>'
   + '</ul></div>';
@@ -656,9 +665,9 @@ function renderToday(){
 
 /* ---------- 学习 / 复习 会话 ---------- */
 let session = null;
-function startSession(mode){
-  const ids = mode === 'study' ? todayNewIds() : dueIds();
-  session = { mode, queue: ids.slice(), idx: 0, open: false, done:0, good:0, fuzzy:0, forgot:0, requeued:{} };
+function startSession(mode, idsOverride){
+  const ids = idsOverride ? idsOverride.slice() : (mode === 'study' ? todayNewIds() : dueIds());
+  session = { mode, queue: ids.slice(), total: ids.length, idx: 0, open: false, done:0, good:0, fuzzy:0, forgot:0, requeued:{} };
 }
 function renderSession(mode){
   const v = $('#view-'+mode);
@@ -681,11 +690,12 @@ function renderSession(mode){
   }
   const c = cardById(session.queue[session.idx]);
   const r = rec(c.id);
-  const total = session.queue.length;
+  const total = session.total;
   const tag = mode === 'study' ? '新卡学习' : '到期复习';
+  const shown = Math.min(session.done + 1, total);
   v.innerHTML = '<div class="flash-wrap">'
-  + '<div class="flash-progress"><span>'+tag+' · 第 '+(session.idx+1)+' / '+total+' 张</span>'
-  + '<div class="progress-bar"><i style="width:'+((session.idx)/total*100).toFixed(1)+'%"></i></div>'
+  + '<div class="flash-progress"><span>'+tag+' · 已完成 '+session.done+' / '+total+' 张</span>'
+  + '<div class="progress-bar"><i style="width:'+(total ? (session.done/total*100).toFixed(1) : 0)+'%"></i></div>'
   + (r.mastered ? '<span class="tag mastered">已毕业</span>' : '')
   + '</div>'
   + '<div class="flash-card'+(session.open?' open':'')+(mode==='review'?' review':'')+'" id="flash-card">'
@@ -913,6 +923,17 @@ function renderSettings(){
   + '<div class="set-row"><div class="s-label"><b>自动同步</b><p>开启后：打开页面自动拉取，学习/复习后自动上传。</p></div>'
   + '<input type="checkbox" id="gh-auto" style="width:20px;height:20px" '+(ghAutoOn()?'checked':'')+' onchange="ghToggleAuto(this.checked)"></div>'
   + '<div id="gh-status" style="font-size:12.5px;color:var(--ink-soft);margin-top:6px">'+(ghLastSync() ? '上次同步：'+ghLastSync() : '尚未同步')+'</div>'
+  + '</div>'
+  + '<div class="panel" style="margin-top:18px"><h3 style="margin-bottom:8px">导入新题目（md / pdf / txt）</h3>'
+  + '<p style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:14px">把你自己整理的面试题加进题库，会和原有题目一起参与记忆排期与云同步。支持两种格式：<b>① 标题式</b>：<code>## Q: 题目</code> 下一行写答案；<b>② 问答式</b>：<code>Q: 题目</code> 换行 <code>A: 答案</code>。PDF 会自动提取文字再按相同格式解析。</p>'
+  + '<div class="set-row"><div class="s-label"><b>粘贴题目文本</b><p>多道题连续排列，每道以 Q: 开头、答案写在题目下方。</p></div>'
+  + '<textarea id="import-q-ta" rows="6" placeholder="示例：&#10;## Q: 什么是艾宾浩斯遗忘曲线？&#10;德国心理学家艾宾浩斯发现，遗忘在学习之后立即开始，先快后慢，因此要及时复习巩固。&#10;## Q: 交叉编译是什么意思？&#10;在一个平台上编译出另一个平台可运行的程序。" style="width:100%;box-sizing:border-box;font-size:13px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);color:var(--ink)"></textarea></div>'
+  + '<div class="set-row"><div class="s-label"><b>从文件导入</b><p>选择 .md / .txt / .pdf 文件，PDF 会先提取文字再解析。</p></div>'
+  + '<label class="btn btn-line" style="cursor:pointer;display:inline-flex;align-items:center">选择文件<input type="file" accept=".md,.txt,.pdf,text/markdown,text/plain,application/pdf" style="display:none" onchange="handleImportFile(event)"></label></div>'
+  + '<div class="set-row"><div class="s-label"><b>解析与导入</b><p>先「解析预览」确认能识别多少道，确认无误再「确认导入」。</p></div>'
+  + '<button class="btn btn-line" onclick="importPreview()">解析预览</button>'
+  + '<button class="btn btn-main" onclick="confirmImportQuestions()">确认导入</button></div>'
+  + '<div id="import-q-preview" style="font-size:12.5px;color:var(--ink-soft);margin-top:6px"></div>'
   + '</div>';
 }
 function exportData(){
@@ -955,6 +976,7 @@ function applyImport(){
   const s = parseBackup(v);
   if(!s){ toast('进度文本无效，请确认完整粘贴'); return; }
   state = s;
+  applyCustomCards();
   saveState(); renderTop(); route(); ghAutoPush();
   toast('导入成功');
 }
@@ -966,6 +988,7 @@ function readImportFile(ev){
     const s = parseBackup(String(r.result).trim());
     if(!s){ toast('文件内容无效'); return; }
     state = s;
+    applyCustomCards();
     saveState(); renderTop(); route(); ghAutoPush();
     toast('导入成功');
   };
@@ -979,6 +1002,95 @@ function parseBackup(text){
     if(obj && obj.v === 1 && obj.start && obj.config && obj.config.intervals && obj.cards && obj.log) return obj;
   }catch(e){}
   return null;
+}
+
+/* ---------- 自定义题目导入 ---------- */
+function applyCustomCards(){
+  const custom = (state.custom||[]).filter(c => c && c.id && c.q && c.a && !CARDS.some(x => x.id === c.id));
+  if(custom.length) CARDS.push(...custom);
+}
+function parseQuestions(text){
+  const out = [];
+  const t = String(text||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  if(!t.trim()) return out;
+  // 方式1：标题式 ## Q: xxx / ### Q：xxx
+  const blocks = t.split(/^#{1,6}\s*[Q问][题]?\s*[:：]\s*/m);
+  if(blocks.length > 1){
+    for(let i=1;i<blocks.length;i++){
+      const lines = blocks[i].split('\n');
+      const q = lines[0].trim();
+      const a = lines.slice(1).join('\n').trim();
+      if(q && a) out.push({q, a});
+    }
+    if(out.length) return out;
+  }
+  // 方式2：Q: ... / A: ... 成对
+  const lines2 = t.split('\n');
+  let curQ = null, curA = [];
+  for(const ln of lines2){
+    const s = ln.trim();
+    if(!s) continue;
+    const mq = s.match(/^[Q问][题]?\s*[:：]\s*(.+)$/);
+    const ma = s.match(/^[A答][案]?\s*[:：]\s*(.+)$/);
+    if(mq){ if(curQ && curA.length) out.push({q:curQ, a:curA.join('\n').trim()}); curQ = mq[1].trim(); curA = []; }
+    else if(ma && curQ){ curA.push(ma[1].trim()); }
+    else if(curQ){ curA.push(s); }
+  }
+  if(curQ && curA.length) out.push({q:curQ, a:curA.join('\n').trim()});
+  return out.filter(x => x.q && x.a);
+}
+function importPreview(){
+  const items = parseQuestions($('#import-q-ta').value.trim());
+  const box = $('#import-q-preview');
+  if(!items.length){ box.textContent = '未识别到题目，请检查格式（参考上方示例）。'; return; }
+  box.innerHTML = '识别到 <b>'+items.length+'</b> 道题：<ul style="margin:6px 0 0 16px;line-height:1.8">'
+    + items.slice(0, 6).map(x => '<li>'+esc(x.q.slice(0, 40))+(x.q.length>40?'…':'')+'</li>').join('')
+    + (items.length > 6 ? '<li>…等共 '+items.length+' 道</li>' : '') + '</ul>';
+}
+function confirmImportQuestions(){
+  const text = ($('#import-q-ta').value||'').trim();
+  const items = parseQuestions(text);
+  if(!items.length){ toast('未识别到题目，请检查格式'); return; }
+  let added = 0, dup = 0;
+  items.forEach(it => {
+    if(CARDS.some(c => c.q === it.q)){ dup++; return; }
+    const nextId = CARDS.reduce((m, c) => Math.max(m, c.id), 0) + 1;
+    state.custom.push({ id: nextId, ch: 13, q: it.q, a: it.a });
+    CARDS.push({ id: nextId, ch: 13, q: it.q, a: it.a });
+    added++;
+  });
+  if(added){ saveState(); renderTop(); route(); ghAutoPush(); }
+  toast('已导入 '+added+' 道，跳过重复 '+dup+' 道');
+  $('#import-q-preview').textContent = added ? '导入完成，可在「题库浏览 · 自定义题库」查看，并已自动上传云端。' : '没有新增题目。';
+  $('#import-q-ta').value = '';
+}
+function handleImportFile(ev){
+  const f = ev.target.files && ev.target.files[0];
+  if(!f) return;
+  const name = (f.name||'').toLowerCase();
+  if(name.endsWith('.pdf') || f.type === 'application/pdf'){ readPdfFile(f); return; }
+  const r = new FileReader();
+  r.onload = () => { $('#import-q-ta').value = String(r.result); toast('已读取文件，点「解析预览」查看'); };
+  r.onerror = () => toast('文件读取失败');
+  r.readAsText(f, 'utf-8');
+}
+function readPdfFile(file){
+  const r = new FileReader();
+  r.onload = () => {
+    if(!window.pdfjsLib){ toast('PDF 解析库未加载（请确认网络可用）'); return; }
+    pdfjsLib.getDocument({ data: r.result }).promise
+      .then(pdf => {
+        const parts = [];
+        for(let i = 1; i <= pdf.numPages; i++){
+          parts.push(pdf.getPage(i).then(p => p.getTextContent()).then(tc => tc.items.map(it => it.str).join(' ')));
+        }
+        return Promise.all(parts);
+      })
+      .then(lines => { $('#import-q-ta').value = lines.join('\n\n'); toast('PDF 文字已提取，点「解析预览」查看'); })
+      .catch(e => toast('PDF 解析失败：'+e.message));
+  };
+  r.onerror = () => toast('文件读取失败');
+  r.readAsArrayBuffer(file);
 }
 
 /* ---------- GitHub Gist 云同步 ---------- */
@@ -1037,6 +1149,7 @@ function ghPull(){
       try{ s = JSON.parse(f.content); }catch(e){ throw new Error('云端数据无法解析'); }
       if(!s || s.v !== 1) throw new Error('云端数据格式无效');
       state = s;
+      applyCustomCards();
       saveState(); renderTop(); route();
       const now = new Date().toLocaleString('zh-CN'); ghSet('ts', now);
       ghStatusMsg('拉取成功；上次同步 '+now);
@@ -1082,6 +1195,7 @@ function resetAll(){
    ========================================================= */
 function init(){
   state = loadState();
+  applyCustomCards();
   renderTop();
   window.addEventListener('hashchange', route);
   $('#hamburger').addEventListener('click', () => { $('#sidebar').classList.add('open'); $('#overlay').classList.add('show'); });
