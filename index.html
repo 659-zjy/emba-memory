@@ -799,24 +799,29 @@ let browseState = { ch:0, kw:'', edit:false, sel:{} };
 function renderBrowse(){
   const v = $('#view-browse');
   const kw = browseState.kw.trim().toLowerCase();
-  let list = CARDS;
+  let list = liveCards();
   if(browseState.ch) list = list.filter(c => c.ch === browseState.ch);
   if(kw) list = list.filter(c => c.q.toLowerCase().includes(kw) || ansOf(c.id).toLowerCase().includes(kw));
-  v.innerHTML = '<div class="section-head"><h2>题库浏览</h2><p>共 '+CARDS.length+' 道题，可按章节筛选、关键词搜索，点题目展开答案。</p></div>'
+  const selCount = Object.keys(browseState.sel).filter(k => browseState.sel[k]).length;
+  v.innerHTML = '<div class="section-head"><h2>题库浏览</h2><p>共 '+liveCards().length+' 道题，可按章节筛选、关键词搜索，点题目展开答案。</p></div>'
   + '<div class="chip-row">'
-  + '<button class="chip-btn'+(browseState.ch===0?' on':'')+'" onclick="setBrowseCh(0)">全部 ('+CARDS.length+')</button>'
+  + '<button class="chip-btn'+(browseState.ch===0?' on':'')+'" onclick="setBrowseCh(0)">全部 ('+liveCards().length+')</button>'
   + Object.keys(CH).map(k => {
-      const n = CARDS.filter(c => c.ch === +k).length;
+      const n = liveCards().filter(c => c.ch === +k).length;
       return '<button class="chip-btn'+(browseState.ch===+k?' on':'')+'" onclick="setBrowseCh('+k+')" style="'+(browseState.ch===+k?'':'')+'">'+CH[k]+' ('+n+')</button>';
     }).join('')
   + '</div>'
-  + '<div class="search-box"><input id="browse-kw" placeholder="搜索题目关键词…" value="'+esc(browseState.kw)+'" oninput="browseState.kw=this.value;renderBrowse()"></div>'
+  + '<div class="search-box"><input id="browse-kw" placeholder="搜索题目关键词…" value="'+esc(browseState.kw)+'" oninput="browseState.kw=this.value;renderBrowse()">'
+  + '<button class="btn '+(browseState.edit?'btn-red':'btn-line')+' btn-mini" style="margin-left:10px;flex-shrink:0" onclick="toggleDelMode()">'+(browseState.edit?'退出管理':'管理删除')+'</button></div>'
+  + (browseState.edit ? '<div class="del-hint">勾选要删除的题目（可跨章节多选），点底部「删除所选」批量移除；删除会同步到云端。</div>' : '')
   + (list.length === 0 ? '<div class="empty-hint">没有匹配的题目</div>'
     : list.map(c => {
         const r = rec(c.id);
         const badge = r.mastered ? '<span class="tag mastered">已毕业</span>' : (r.learned ? '<span class="tag learned">学习中</span>' : '');
         const due = r.learned && isDue(c.id) ? '<span class="tag due">今日到期</span>' : '';
-        return '<div class="browse-item" style="border-left-color:'+CH_COLOR[c.ch-1]+'">'
+        const checked = browseState.sel[c.id] ? ' checked' : '';
+        return '<div class="browse-item'+(browseState.sel[c.id] ? ' del-on' : '')+'" style="border-left-color:'+CH_COLOR[c.ch-1]+'">'
+          + (browseState.edit ? '<label class="del-cb"><input type="checkbox"'+checked+' onchange="toggleDelSel('+c.id+',this.checked)"></label>' : '')
           + '<div class="bi-q" onclick="this.parentNode.classList.toggle(\'open\')">'+esc(c.q)+'</div>'
           + '<div class="bi-a">'+ansOf(c.id)+'</div>'
           + '<div class="bi-meta"><span style="color:'+CH_COLOR[c.ch-1]+';font-weight:700">'+CH[c.ch]+'</span>'+badge+due
@@ -830,7 +835,10 @@ function renderBrowse(){
           + '<button class="btn btn-line btn-mini" onclick="cancelEditAns('+c.id+')">取消</button>'
           + '</div></div>'
           + '</div>';
-      }).join(''));
+      }).join(''))
+  + (browseState.edit && selCount ? '<div class="del-bar"><span>已选 <b>'+selCount+'</b> 道题</span>'
+      + '<button class="btn btn-red btn-mini" onclick="confirmDeleteSelected()">删除所选</button>'
+      + '<button class="btn btn-line btn-mini" onclick="browseState.sel={};renderBrowse()">取消选择</button></div>' : '');
 }
 function setBrowseCh(ch){ browseState.ch = ch; renderBrowse(); }
 function toggleDelMode(){
