@@ -723,10 +723,11 @@ function renderSession(mode){
   const r = rec(c.id);
   const total = session.total;
   const tag = mode === 'study' ? '新卡学习' : '到期复习';
-  const shown = Math.min(session.done + 1, total);
+  const todayTotal = (mode === 'study' && state.today && state.today.newIds && state.today.newIds.length) ? state.today.newIds.length : total;
+  const doneShown = (mode === 'study' && todayTotal !== total) ? Math.max(0, (state.log[todayStr()]||{}).learn||0) : session.done;
   v.innerHTML = '<div class="flash-wrap">'
-  + '<div class="flash-progress"><span>'+tag+' · 已完成 '+session.done+' / '+total+' 张</span>'
-  + '<div class="progress-bar"><i style="width:'+(total ? (session.done/total*100).toFixed(1) : 0)+'%"></i></div>'
+  + '<div class="flash-progress"><span>'+tag+' · '+(mode==='study' ? '第 '+(doneShown+1)+' / '+todayTotal+' 张' : '已完成 '+doneShown+' / '+todayTotal+' 张')+'</span>'
+  + '<div class="progress-bar"><i style="width:'+(todayTotal ? Math.min(100, (doneShown/todayTotal*100)).toFixed(1) : 0)+'%"></i></div>'
   + (r.mastered ? '<span class="tag mastered">已毕业</span>' : '')
   + '</div>'
   + '<div class="flash-card'+(session.open?' open':'')+(mode==='review'?' review':'')+'" id="flash-card">'
